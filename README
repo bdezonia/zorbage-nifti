@@ -2,9 +2,9 @@ zorbage-nifti: code for reading nifti data files into zorbage structures for fur
 
 To learn more about Zorbage please visit https://github.com/bdezonia/zorbage
 
-Code example to open all data associated with a data file:
+Code example to open a Nifti data file:
 
-  DataBundle results = Nifti.loadDataset("mri.nii");
+  DataBundle results = Nifti.open("mri.nii");
 
 How to include zorbage-nifti in your Maven project
 
@@ -27,3 +27,5 @@ All about nifti 1
 
 All about nifti 2
   https://nifti.nimh.nih.gov/nifti-2/
+
+Note that zorbage-nifti does not (yet) read old style ANALYZE files
