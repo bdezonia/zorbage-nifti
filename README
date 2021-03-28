@@ -1,3 +1,27 @@
+zorbage-nifti: code for reading nifti data files into zorbage structures for further processing
+
+To learn more about Zorbage please visit https://github.com/bdezonia/zorbage
+
+Code example to open all data associated with a data file:
+
+  DataBundle results = Nifti.loadDataset("mri.nii");
+
+How to include zorbage-nifti in your Maven project
+
+  Add the following dependency to your project's pom.xml:
+  
+  <dependency>
+    <groupId>io.github.bdezonia</groupId>
+    <artifactId>zorbage-nifti</artifactId>
+    <version>0.0.3</version>
+  </dependency>
+  
+How to include zorbage-nifti in a different build system
+
+  See https://search.maven.org/artifact/io.github.bdezonia/zorbage-nifti/0.0.3/jar
+  for instructions on how to reference zorbage-nifti in build systems such as
+  Gradle or others.
+
 All about nifti 1
   https://nifti.nimh.nih.gov/nifti-1/
 

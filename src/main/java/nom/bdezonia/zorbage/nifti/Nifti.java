@@ -85,7 +85,7 @@ public class Nifti {
 	 * @param filename
 	 * @return
 	 */
-	public static DataBundle loadDataset(String filename) {
+	public static DataBundle open(String filename) {
 				
 		File file = new File(filename);
 
