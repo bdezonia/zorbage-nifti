@@ -3,3 +3,4 @@
 .settings
 /target/
 *.nii
+deploy.sh
