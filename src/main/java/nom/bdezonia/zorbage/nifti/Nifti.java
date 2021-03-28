@@ -48,8 +48,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Arrays;
 
-import javax.swing.JFileChooser;
-
 import nom.bdezonia.zorbage.algebra.Allocatable;
 import nom.bdezonia.zorbage.algebra.G;
 import nom.bdezonia.zorbage.algorithm.GridIterator;
@@ -75,19 +73,22 @@ import nom.bdezonia.zorbage.type.real.float32.Float32Member;
 import nom.bdezonia.zorbage.type.real.float64.Float64Member;
 import nom.bdezonia.zorbage.type.real.highprec.HighPrecisionMember;
 
-public class Main {
+/**
+ * 
+ * @author Barry DeZonia
+ *
+ */
+public class Nifti {
+	
+	/**
+	 * 
+	 * @param filename
+	 * @return
+	 */
+	public static DataBundle loadDataset(String filename) {
+				
+		File file = new File(filename);
 
-	public static void main(String[] args) {
-		
-		JFileChooser jfc = new JFileChooser();
-
-		int returnValue = jfc.showOpenDialog(null);
-
-		if (returnValue != JFileChooser.APPROVE_OPTION)
-			System.exit(0);
-		
-		File file = jfc.getSelectedFile();
-		
 		System.out.println("File length = "+file.length());
 		
 		try {
@@ -377,8 +378,13 @@ public class Main {
 				}
 			}
 			else {
+				
 				System.out.println("unknown header size  "+headerSize);
 				System.out.println("  maybe this is an old style ANALYZE data file");
+				
+				d.close();
+				
+				return new DataBundle();
 			}
 
 			byte ext0, ext1, ext2, ext3;
@@ -415,13 +421,20 @@ public class Main {
 			}
 
 			DataBundle bundle = new DataBundle();
+			
 			mergeData(bundle, data_type, data);
 
-			in.close();
+			d.close();
+			
+			System.out.println("DONE READING");
+
+			return bundle;
+
 		} catch (Exception e) {
+		
 			System.out.println(e);
+			return new DataBundle();
 		}
-		System.out.println("DONE READING");
 	}
 	
 	private static Allocatable value(short data_type) {
