@@ -28,19 +28,24 @@ package nom.bdezonia.zorbage.nifti;
 
 /*
  * TODO
- * 1) byte swap data when needed
- * 2) permute axes as specified in a header variable so data is ordered correctly
- * 3) eliminate duplicate code
- * 4) make a static reader class and then use it in zorbage-viewer
- * 5) use header data to improve translations and to tag things with correct metadata
+ * 1) permute axes as specified in a header variable so data is ordered correctly
+ * 2) eliminate duplicate code
+ * 3) make a static reader class and then use it in zorbage-viewer
+ * 4) use header data to improve translations and to tag things with correct metadata
  *    There are some data scaling constants that I am not applying to the data. Using
  *    it might require all data sets to be floating point though.
- * 6) support float 128 bit types (as highprecs for now)
+ * 5) support float 128 bit types (as highprecs for now)
+ * 6) figure out how to support old Analyze files when detected
+ * 7) deal with extension bytes after the header and before the pixel data
+ * 8) support data intents from the intent codes in the header
+ * 9) see this page for lots of good info: https://brainder.org/2012/09/23/the-nifti-file-format/
+ * 10) there may be a 1-bit bool type referred to as data_type 1. I haven't found a lot of docs about it yet.
  */
 
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Arrays;
 
@@ -58,6 +63,7 @@ import nom.bdezonia.zorbage.type.color.ArgbMember;
 import nom.bdezonia.zorbage.type.color.RgbMember;
 import nom.bdezonia.zorbage.type.complex.float32.ComplexFloat32Member;
 import nom.bdezonia.zorbage.type.complex.float64.ComplexFloat64Member;
+import nom.bdezonia.zorbage.type.complex.highprec.ComplexHighPrecisionMember;
 import nom.bdezonia.zorbage.type.integer.int16.SignedInt16Member;
 import nom.bdezonia.zorbage.type.integer.int16.UnsignedInt16Member;
 import nom.bdezonia.zorbage.type.integer.int32.SignedInt32Member;
@@ -68,6 +74,7 @@ import nom.bdezonia.zorbage.type.integer.int8.SignedInt8Member;
 import nom.bdezonia.zorbage.type.integer.int8.UnsignedInt8Member;
 import nom.bdezonia.zorbage.type.real.float32.Float32Member;
 import nom.bdezonia.zorbage.type.real.float64.Float64Member;
+import nom.bdezonia.zorbage.type.real.highprec.HighPrecisionMember;
 
 public class Main {
 
@@ -87,34 +94,42 @@ public class Main {
 		System.out.println("File length = "+file.length());
 		
 		try {
+			byte[] buf128 = new byte[16];
+			
 			FileInputStream in = new FileInputStream(file);
 			
 			DataInputStream d = new DataInputStream(in);
 			
+			boolean swapBytes = false;
+			
 			int headerSize = d.readInt();
 			
-			if (headerSize == 348) {
+			if (headerSize == 348 || swapInt(headerSize) == 348) {
 				
 				// possibly nifti 1
 				
 				System.out.println("Possibly NIFTI 1");
 
 				for (int i = 0; i < 35; i++) {
-					d.readByte();
+					readByte(d);
 				}
 				
-				byte dim_info = d.readByte();
+				byte dim_info = readByte(d);
 
 				// pixel dimensions
 				
-				short numD = d.readShort();
-				short d1 = d.readShort();
-				short d2 = d.readShort();
-				short d3 = d.readShort();
-				short d4 = d.readShort();
-				short d5 = d.readShort();
-				short d6 = d.readShort();
-				short d7 = d.readShort();
+				short numD = readShort(d, false);
+				if (numD < 0 || numD > 7) {
+					numD = swapShort(numD);
+					swapBytes = true;
+				}
+				short d1 = readShort(d, swapBytes);
+				short d2 = readShort(d, swapBytes);
+				short d3 = readShort(d, swapBytes);
+				short d4 = readShort(d, swapBytes);
+				short d5 = readShort(d, swapBytes);
+				short d6 = readShort(d, swapBytes);
+				short d7 = readShort(d, swapBytes);
 				
 				long[] dims = new long[numD];
 				for (int i = 0; i < numD; i++) {
@@ -127,89 +142,89 @@ public class Main {
 					else if (i == 6) dims[6] = d7;
 				}
 				
-				float intent_p1 = d.readFloat();
-				float intent_p2 = d.readFloat();
-				float intent_p3 = d.readFloat();
+				float intent_p1 = readFloat(d, swapBytes);
+				float intent_p2 = readFloat(d, swapBytes);
+				float intent_p3 = readFloat(d, swapBytes);
 				
-				short nifti_intent_code = d.readShort();
-				short data_type = d.readShort();
-				short bitpix = d.readShort();
-				short slice_start = d.readShort();
+				short nifti_intent_code = readShort(d, swapBytes);
+				short data_type = readShort(d, swapBytes);
+				short bitpix = readShort(d, swapBytes);
+				short slice_start = readShort(d, swapBytes);
 				
 				System.out.println("data type: "+data_type+" bitpix "+bitpix);
 				
 				// pixel spacings
 				
-				float sd1 = d.readFloat();
-				float sd2 = d.readFloat();
-				float sd3 = d.readFloat();
-				float sd4 = d.readFloat();
-				float sd5 = d.readFloat();
-				float sd6 = d.readFloat();
-				float sd7 = d.readFloat();
-				float sd8 = d.readFloat();
+				float sd1 = readFloat(d, swapBytes);
+				float sd2 = readFloat(d, swapBytes);
+				float sd3 = readFloat(d, swapBytes);
+				float sd4 = readFloat(d, swapBytes);
+				float sd5 = readFloat(d, swapBytes);
+				float sd6 = readFloat(d, swapBytes);
+				float sd7 = readFloat(d, swapBytes);
+				float sd8 = readFloat(d, swapBytes);
 
-				float vox_offset = d.readFloat();
-				float scl_slope = d.readFloat();
-				float scl_inter = d.readFloat();
+				float vox_offset = readFloat(d, swapBytes);
+				float scl_slope = readFloat(d, swapBytes);
+				float scl_inter = readFloat(d, swapBytes);
 
-				short slice_end = d.readShort();
-				byte slice_code = d.readByte();
-				byte xyzt_units = d.readByte();
+				short slice_end = readShort(d, swapBytes);
+				byte slice_code = readByte(d);
+				byte xyzt_units = readByte(d);
 				
-				float cal_max = d.readFloat();
-				float cal_min = d.readFloat();
-				float slice_duration = d.readFloat();
-				float toffset = d.readFloat();
+				float cal_max = readFloat(d, swapBytes);
+				float cal_min = readFloat(d, swapBytes);
+				float slice_duration = readFloat(d, swapBytes);
+				float toffset = readFloat(d, swapBytes);
 
 				for (int i = 0; i < 2; i++) {
-					d.readInt();
+					readInt(d, swapBytes);
 				}
 
 				for (int i = 0; i < 80; i++) {
 					// TODO: description string: build it
-					d.readByte();
+					readByte(d);
 				}
 
 				for (int i = 0; i < 24; i++) {
 					// TODO: aux filename string: build it
-					d.readByte();
+					readByte(d);
 				}
 
-				short qform_code = d.readShort();
-				short sform_code = d.readShort();
+				short qform_code = readShort(d, swapBytes);
+				short sform_code = readShort(d, swapBytes);
 
-				float quatern_b = d.readFloat();
-				float quatern_c = d.readFloat();
-				float quatern_d = d.readFloat();
-				float qoffset_x = d.readFloat();
-				float qoffset_y = d.readFloat();
-				float qoffset_z = d.readFloat();
+				float quatern_b = readFloat(d, swapBytes);
+				float quatern_c = readFloat(d, swapBytes);
+				float quatern_d = readFloat(d, swapBytes);
+				float qoffset_x = readFloat(d, swapBytes);
+				float qoffset_y = readFloat(d, swapBytes);
+				float qoffset_z = readFloat(d, swapBytes);
 
 				// affine transform : row 0 = x, row 1 = y, row 2 = z
 				
-				float x0 = d.readFloat();
-				float x1 = d.readFloat();
-				float x2 = d.readFloat();
-				float x3 = d.readFloat();
-				float y0 = d.readFloat();
-				float y1 = d.readFloat();
-				float y2 = d.readFloat();
-				float y3 = d.readFloat();
-				float z0 = d.readFloat();
-				float z1 = d.readFloat();
-				float z2 = d.readFloat();
-				float z3 = d.readFloat();
+				float x0 = readFloat(d, swapBytes);
+				float x1 = readFloat(d, swapBytes);
+				float x2 = readFloat(d, swapBytes);
+				float x3 = readFloat(d, swapBytes);
+				float y0 = readFloat(d, swapBytes);
+				float y1 = readFloat(d, swapBytes);
+				float y2 = readFloat(d, swapBytes);
+				float y3 = readFloat(d, swapBytes);
+				float z0 = readFloat(d, swapBytes);
+				float z1 = readFloat(d, swapBytes);
+				float z2 = readFloat(d, swapBytes);
+				float z3 = readFloat(d, swapBytes);
 
 				for (int i = 0; i < 16; i++) {
 					// TODO: intent_name string: build it
-					d.readByte();
+					readByte(d);
 				}
 
-				byte magic0 = d.readByte();
-				byte magic1 = d.readByte();
-				byte magic2 = d.readByte();
-				byte magic3 = d.readByte();
+				byte magic0 = readByte(d);
+				byte magic1 = readByte(d);
+				byte magic2 = readByte(d);
+				byte magic3 = readByte(d);
 
 				if (magic0 == 'n' && magic1 == 'i' && magic2 == '1' && magic3 == 0)
 					System.out.println("VALID and of type 1a");
@@ -218,8 +233,8 @@ public class Main {
 				else
 					System.out.println("INVALID type 1 header");
 
-				// BDZ HACK : i read somewhere that the data starts 4 bytes beyond end of header
-				int jnk = d.readInt();
+				// BDZ HACK : i read somewhere that the data starts 4 bytes beyond end of header; is this the first link in the extension chain?
+				int jnk = readInt(d, swapBytes);
 				
 				Allocatable type = null;
 				
@@ -269,7 +284,7 @@ public class Main {
 				case 2048: // cfloat128 : treat as highprec
 					type = G.CHP.construct();
 					break;
-				case 2304: // argb
+				case 2304: // rgba
 					type = G.ARGB.construct();
 					break;
 				default:
@@ -293,81 +308,83 @@ public class Main {
 					itr.next(idx);
 					switch (data_type) {
 					case 2: // uint8
-						tb = d.readByte();
+						tb = readByte(d);
 						((UnsignedInt8Member) type).setV(tb);
 						break;
 					case 4: // int16
-						ts = d.readShort();
+						ts = readShort(d, swapBytes);
 						((SignedInt16Member) type).setV(ts);
 						break;
 					case 8: // int32
-						ti = d.readInt();
+						ti = readInt(d, swapBytes);
 						((SignedInt32Member) type).setV(ti);
 						break;
 					case 16: // float32
-						tf = d.readFloat();
+						tf = readFloat(d, swapBytes);
 						((Float32Member) type).setV(tf);
 						break;
 					case 32: // cfloat32
-						tf = d.readFloat();
+						tf = readFloat(d, swapBytes);
 						((ComplexFloat32Member) type).setR(tf);
-						tf = d.readFloat();
+						tf = readFloat(d, swapBytes);
 						((ComplexFloat32Member) type).setI(tf);
 						break;
 					case 64: // float64
-						td = d.readDouble();
+						td = readDouble(d, swapBytes);
 						((Float64Member) type).setV(td);
 						break;
 					case 128: // rgb
-						tb = d.readByte();
+						tb = readByte(d);
 						((RgbMember) type).setR(tb);
-						tb = d.readByte();
+						tb = readByte(d);
 						((RgbMember) type).setG(tb);
-						tb = d.readByte();
+						tb = readByte(d);
 						((RgbMember) type).setB(tb);
 						break;
 					case 256: // int8
-						tb = d.readByte();
+						tb = readByte(d);
 						((SignedInt8Member) type).setV(tb);
 						break;
 					case 512: // uint16
-						ts = d.readShort();
+						ts = readShort(d, swapBytes);
 						((UnsignedInt16Member) type).setV(ts);
 						break;
 					case 768: // uint32
-						ti = d.readInt();
+						ti = readInt(d, swapBytes);
 						((UnsignedInt32Member) type).setV(ti);
 						break;
 					case 1024: // int64
-						tl = d.readLong();
+						tl = readLong(d, swapBytes);
 						((SignedInt64Member) type).setV(tl);
 						break;
 					case 1280: // uint64
-						tl = d.readLong();
+						tl = readLong(d, swapBytes);
 						((UnsignedInt64Member) type).setV(tl);
 						break;
 					case 1536: // float128 : treat as highprec
-						// TODO
-						System.out.println("skipping float 128");
+						tbd = readFloat128(d, swapBytes, buf128);
+						((HighPrecisionMember) type).setV(tbd);
 						break;
 					case 1792: // cfloat64
-						td = d.readDouble();
+						td = readDouble(d, swapBytes);
 						((ComplexFloat64Member) type).setR(td);
-						td = d.readDouble();
+						td = readDouble(d, swapBytes);
 						((ComplexFloat64Member) type).setI(td);
 						break;
 					case 2048: // cfloat128 : treat as highprec
-						// TODO
-						System.out.println("skipping complex float 128");
+						tbd = readFloat128(d, swapBytes, buf128);
+						((ComplexHighPrecisionMember) type).setR(tbd);
+						tbd = readFloat128(d, swapBytes, buf128);
+						((ComplexHighPrecisionMember) type).setI(tbd);
 						break;
-					case 2304: // argb
-						tb = d.readByte();
+					case 2304: // rgba
+						tb = readByte(d);
 						((ArgbMember) type).setR(tb);
-						tb = d.readByte();
+						tb = readByte(d);
 						((ArgbMember) type).setG(tb);
-						tb = d.readByte();
+						tb = readByte(d);
 						((ArgbMember) type).setB(tb);
-						tb = d.readByte();
+						tb = readByte(d);
 						((ArgbMember) type).setA(tb);
 						break;
 					default:
@@ -422,48 +439,52 @@ public class Main {
 				case 2048: // cfloat128 : treat as highprec
 					bundle.mergeComplexHP(data);
 					break;
-				case 2304: // argb
+				case 2304: // rgba
 					bundle.mergeArgb(data);
 					break;
 				default:
 					System.out.println("Unknown data type! "+data_type);
 				}
 			}
-			else if (headerSize == 540) {
+			else if (headerSize == 540 || swapInt(headerSize) == 540) {
 				
 				// possibly nifti 2
 				
 				System.out.println("Possibly NIFTI 2");
 
-				byte magic0 = d.readByte();
-				byte magic1 = d.readByte();
-				byte magic2 = d.readByte();
-				byte magic3 = d.readByte();
-				byte magic4 = d.readByte();
-				byte magic5 = d.readByte();
-				byte magic6 = d.readByte();
-				byte magic7 = d.readByte();
+				byte magic0 = readByte(d);
+				byte magic1 = readByte(d);
+				byte magic2 = readByte(d);
+				byte magic3 = readByte(d);
+				byte magic4 = readByte(d);
+				byte magic5 = readByte(d);
+				byte magic6 = readByte(d);
+				byte magic7 = readByte(d);
 
-				if (magic0 == 'n' && magic1 == '+' && magic2 == '2' && magic3 == 0 && magic4 == 0 && magic5 == 0 && magic6 == 0 && magic7 == 0)
-					System.out.println("VALID");
+				if (magic0 == 'n' && magic1 == 'i' && magic2 == '2' && magic3 == 0)
+					System.out.println("VALID and of type 2a");
+				else if (magic0 == 'n' && magic1 == '+' && magic2 == '2' && magic3 == 0)
+					System.out.println("VALID and of type 2b");
 				else
 					System.out.println("INVALID type 2 header");
-				
-				short data_type = d.readShort();
-				short bitpix = d.readShort();
-				
-				System.out.println("data type: "+data_type+" bitpix "+bitpix);
+
+				short data_type = readShort(d, false);
+				short bitpix = readShort(d, false);
 				
 				// pixel dimensions
 				
-				long numD = d.readLong();
-				long d1 = d.readLong();
-				long d2 = d.readLong();
-				long d3 = d.readLong();
-				long d4 = d.readLong();
-				long d5 = d.readLong();
-				long d6 = d.readLong();
-				long d7 = d.readLong();
+				long numD = readLong(d, false);
+				if (numD < 0 || numD > 7) {
+					numD = swapLong(numD);
+					swapBytes = true;
+				}
+				long d1 = readLong(d, swapBytes);
+				long d2 = readLong(d, swapBytes);
+				long d3 = readLong(d, swapBytes);
+				long d4 = readLong(d, swapBytes);
+				long d5 = readLong(d, swapBytes);
+				long d6 = readLong(d, swapBytes);
+				long d7 = readLong(d, swapBytes);
 				
 				long[] dims = new long[(int)numD];
 				for (int i = 0; i < numD; i++) {
@@ -475,87 +496,94 @@ public class Main {
 					else if (i == 5) dims[5] = d6;
 					else if (i == 6) dims[6] = d7;
 				}
+
+				if (swapBytes) {
+					data_type = swapShort(data_type);
+					bitpix = swapShort(bitpix);
+				}
 				
-				double intent_p1 = d.readDouble();
-				double intent_p2 = d.readDouble();
-				double intent_p3 = d.readDouble();
+				System.out.println("data type: "+data_type+" bitpix "+bitpix);
+				
+				double intent_p1 = readDouble(d, swapBytes);
+				double intent_p2 = readDouble(d, swapBytes);
+				double intent_p3 = readDouble(d, swapBytes);
 				
 				// pixel spacings
 				
-				double sd1 = d.readDouble();
-				double sd2 = d.readDouble();
-				double sd3 = d.readDouble();
-				double sd4 = d.readDouble();
-				double sd5 = d.readDouble();
-				double sd6 = d.readDouble();
-				double sd7 = d.readDouble();
-				double sd8 = d.readDouble();
+				double sd1 = readDouble(d, swapBytes);
+				double sd2 = readDouble(d, swapBytes);
+				double sd3 = readDouble(d, swapBytes);
+				double sd4 = readDouble(d, swapBytes);
+				double sd5 = readDouble(d, swapBytes);
+				double sd6 = readDouble(d, swapBytes);
+				double sd7 = readDouble(d, swapBytes);
+				double sd8 = readDouble(d, swapBytes);
 
-				long vox_offset = d.readLong();
+				long vox_offset = readLong(d, swapBytes);
 				
-				double scl_slope = d.readDouble();
-				double scl_inter = d.readDouble();
-				double cal_max = d.readDouble();
-				double cal_min = d.readDouble();
-				double slice_duration = d.readDouble();
-				double toffset = d.readDouble();
+				double scl_slope = readDouble(d, swapBytes);
+				double scl_inter = readDouble(d, swapBytes);
+				double cal_max = readDouble(d, swapBytes);
+				double cal_min = readDouble(d, swapBytes);
+				double slice_duration = readDouble(d, swapBytes);
+				double toffset = readDouble(d, swapBytes);
 
-				long slice_start = d.readLong();
-				long slice_end = d.readLong();
+				long slice_start = readLong(d, swapBytes);
+				long slice_end = readLong(d, swapBytes);
 
 				for (int i = 0; i < 80; i++) {
 					// TODO: description string: build it
-					d.readByte();
+					readByte(d);
 				}
 
 				for (int i = 0; i < 24; i++) {
 					// TODO: aux filename string: build it
-					d.readByte();
+					readByte(d);
 				}
 
-				int qform_code = d.readInt();
-				int sform_code = d.readInt();
+				int qform_code = readInt(d, swapBytes);
+				int sform_code = readInt(d, swapBytes);
 
-				double quatern_b = d.readFloat();
-				double quatern_c = d.readFloat();
-				double quatern_d = d.readFloat();
-				double qoffset_x = d.readFloat();
-				double qoffset_y = d.readFloat();
-				double qoffset_z = d.readFloat();
+				double quatern_b = readFloat(d, swapBytes);
+				double quatern_c = readFloat(d, swapBytes);
+				double quatern_d = readFloat(d, swapBytes);
+				double qoffset_x = readFloat(d, swapBytes);
+				double qoffset_y = readFloat(d, swapBytes);
+				double qoffset_z = readFloat(d, swapBytes);
 
 				// affine transform : row 0 = x, row 1 = y, row 2 = z
 				
-				double x0 = d.readDouble();
-				double x1 = d.readDouble();
-				double x2 = d.readDouble();
-				double x3 = d.readDouble();
-				double y0 = d.readDouble();
-				double y1 = d.readDouble();
-				double y2 = d.readDouble();
-				double y3 = d.readDouble();
-				double z0 = d.readDouble();
-				double z1 = d.readDouble();
-				double z2 = d.readDouble();
-				double z3 = d.readDouble();
+				double x0 = readDouble(d, swapBytes);
+				double x1 = readDouble(d, swapBytes);
+				double x2 = readDouble(d, swapBytes);
+				double x3 = readDouble(d, swapBytes);
+				double y0 = readDouble(d, swapBytes);
+				double y1 = readDouble(d, swapBytes);
+				double y2 = readDouble(d, swapBytes);
+				double y3 = readDouble(d, swapBytes);
+				double z0 = readDouble(d, swapBytes);
+				double z1 = readDouble(d, swapBytes);
+				double z2 = readDouble(d, swapBytes);
+				double z3 = readDouble(d, swapBytes);
 
-				int slice_code = d.readInt();
-				int xyzt_units = d.readInt();
-				int nifti_intent_code = d.readInt();
+				int slice_code = readInt(d, swapBytes);
+				int xyzt_units = readInt(d, swapBytes);
+				int nifti_intent_code = readInt(d, swapBytes);
 				
 				for (int i = 0; i < 16; i++) {
 					// TODO: intent_name string: build it
-					d.readByte();
+					readByte(d);
 				}
 
-				byte dimInfo = d.readByte();
+				byte dimInfo = readByte(d);
 				
 				for (int i = 0; i < 15; i++) {
 					// unused stuff
-					d.readByte();
+					readByte(d);
 				}
 
-				// BDZ HACK : i read somewhere that the data starts 4 bytes beyond end of header
-				int jnk = d.readInt();
+				// BDZ HACK : i read somewhere that the data starts 4 bytes beyond end of header; is this the first link in the extension chain?
+				int jnk = readInt(d, swapBytes);
 
 				Allocatable type = null;
 				
@@ -605,7 +633,7 @@ public class Main {
 				case 2048: // cfloat128 : treat as highprec
 					type = G.CHP.construct();
 					break;
-				case 2304: // argb
+				case 2304: // rgba
 					type = G.ARGB.construct();
 					break;
 				default:
@@ -629,81 +657,83 @@ public class Main {
 					itr.next(idx);
 					switch (data_type) {
 					case 2: // uint8
-						tb = d.readByte();
+						tb = readByte(d);
 						((UnsignedInt8Member) type).setV(tb);
 						break;
 					case 4: // int16
-						ts = d.readShort();
+						ts = readShort(d, swapBytes);
 						((SignedInt16Member) type).setV(ts);
 						break;
 					case 8: // int32
-						ti = d.readInt();
+						ti = readInt(d, swapBytes);
 						((SignedInt32Member) type).setV(ti);
 						break;
 					case 16: // float32
-						tf = d.readFloat();
+						tf = readFloat(d, swapBytes);
 						((Float32Member) type).setV(tf);
 						break;
 					case 32: // cfloat32
-						tf = d.readFloat();
+						tf = readFloat(d, swapBytes);
 						((ComplexFloat32Member) type).setR(tf);
-						tf = d.readFloat();
+						tf = readFloat(d, swapBytes);
 						((ComplexFloat32Member) type).setI(tf);
 						break;
 					case 64: // float64
-						td = d.readDouble();
+						td = readDouble(d, swapBytes);
 						((Float64Member) type).setV(td);
 						break;
 					case 128: // rgb
-						tb = d.readByte();
+						tb = readByte(d);
 						((RgbMember) type).setR(tb);
-						tb = d.readByte();
+						tb = readByte(d);
 						((RgbMember) type).setG(tb);
-						tb = d.readByte();
+						tb = readByte(d);
 						((RgbMember) type).setB(tb);
 						break;
 					case 256: // int8
-						tb = d.readByte();
+						tb = readByte(d);
 						((SignedInt8Member) type).setV(tb);
 						break;
 					case 512: // uint16
-						ts = d.readShort();
+						ts = readShort(d, swapBytes);
 						((UnsignedInt16Member) type).setV(ts);
 						break;
 					case 768: // uint32
-						ti = d.readInt();
+						ti = readInt(d, swapBytes);
 						((UnsignedInt32Member) type).setV(ti);
 						break;
 					case 1024: // int64
-						tl = d.readLong();
+						tl = readLong(d, swapBytes);
 						((SignedInt64Member) type).setV(tl);
 						break;
 					case 1280: // uint64
-						tl = d.readLong();
+						tl = readLong(d, swapBytes);
 						((UnsignedInt64Member) type).setV(tl);
 						break;
 					case 1536: // float128 : treat as highprec
-						// TODO
-						System.out.println("skipping float 128");
+						tbd = readFloat128(d, swapBytes, buf128);
+						((HighPrecisionMember) type).setV(tbd);
 						break;
 					case 1792: // cfloat64
-						td = d.readDouble();
+						td = readDouble(d, swapBytes);
 						((ComplexFloat64Member) type).setR(td);
-						td = d.readDouble();
+						td = readDouble(d, swapBytes);
 						((ComplexFloat64Member) type).setI(td);
 						break;
 					case 2048: // cfloat128 : treat as highprec
-						// TODO
-						System.out.println("skipping complex float 128");
+						tbd = readFloat128(d, swapBytes, buf128);
+						((ComplexHighPrecisionMember) type).setR(tbd);
+						tbd = readFloat128(d, swapBytes, buf128);
+						((ComplexHighPrecisionMember) type).setI(tbd);
 						break;
-					case 2304: // argb
-						tb = d.readByte();
+					case 2304: // rgba
+						tb = readByte(d);
 						((ArgbMember) type).setR(tb);
-						tb = d.readByte();
+						tb = readByte(d);
 						((ArgbMember) type).setG(tb);
-						tb = d.readByte();
+						tb = readByte(d);
 						((ArgbMember) type).setB(tb);
-						tb = d.readByte();
+						tb = readByte(d);
 						((ArgbMember) type).setA(tb);
 						break;
 					default:
@@ -758,7 +788,7 @@ public class Main {
 				case 2048: // cfloat128 : treat as highprec
 					bundle.mergeComplexHP(data);
 					break;
-				case 2304: // argb
+				case 2304: // rgba
 					bundle.mergeArgb(data);
 					break;
 				default:
@@ -775,4 +805,95 @@ public class Main {
 		}
 		System.out.println("DONE READING");
 	}
-}
+	
+	private static byte readByte(DataInputStream str) throws IOException {
+		return str.readByte();
+	}
+	
+	private static short readShort(DataInputStream str, boolean swapBytes) throws IOException {
+		short v = str.readShort();
+		if (swapBytes) v = swapShort(v);
+		return v;
+	}
+	
+	private static int readInt(DataInputStream str, boolean swapBytes) throws IOException {
+		int v = str.readInt();
+		if (swapBytes) v = swapInt(v);
+		return v;
+	}
+	
+	private static long readLong(DataInputStream str, boolean swapBytes) throws IOException {
+		long v = str.readLong();
+		if (swapBytes) v = swapLong(v);
+		return v;
+	}
+	
+	private static float readFloat(DataInputStream str, boolean swapBytes) throws IOException {
+		float v = str.readFloat();
+		if (swapBytes) {
+			int b = Float.floatToIntBits(v);
+			b = swapInt(b);
+			v = Float.intBitsToFloat(b);
+		}
+		return v;
+	}
+	
+	private static double readDouble(DataInputStream str, boolean swapBytes) throws IOException {
+		double v = str.readDouble();
+		if (swapBytes) {
+			long b = Double.doubleToLongBits(v);
+			b = swapLong(b);
+			v = Double.longBitsToDouble(b);
+		}
+		return v;
+	}
+	
+	private static BigDecimal readFloat128(DataInputStream str, boolean swapBytes, byte[] buffer) throws IOException {
+		
+		if (buffer.length != 16)
+			throw new IllegalArgumentException("byte buffer has incorrect size");
+		
+		for (int i = 0; i < 16; i++) {
+			buffer[i] = str.readByte();
+		}
+		
+		if (swapBytes) {
+			for (int i = 0; i < 8; i++) {
+				byte tmp = buffer[i];
+				buffer[i] = buffer[15 - i];
+				buffer[15-i] = tmp;
+			}
+		}
+		
+		// TODO: decode the 16 bytes as a IEEE 128 bit float and then decode that value as a BigDecimal.
+		//   One gotcha: can't represent NaNs this way.
+		
+		return BigDecimal.ZERO;
+	}
+	
+	private static short swapShort(short in) {
+		int b0 = (in >> 0) & 0xff;
+		int b1 = (in >> 8) & 0xff;
+		return (short) ((b0 << 8) | (b1 << 0));
+	}
+	
+	private static int swapInt(int in) {
+		int b0 = (in >> 0) & 0xff;
+		int b1 = (in >> 8) & 0xff;
+		int b2 = (in >> 16) & 0xff;
+		int b3 = (in >> 24) & 0xff;
+		return (b0 << 24) | (b1 << 16) | (b2 << 8) | (b3 << 0);
+	}
+	
+	private static long swapLong(long in) {
+		long b0 = (in >> 0) & 0xff;
+		long b1 = (in >> 8) & 0xff;
+		long b2 = (in >> 16) & 0xff;
+		long b3 = (in >> 24) & 0xff;
+		long b4 = (in >> 32) & 0xff;
+		long b5 = (in >> 40) & 0xff;
+		long b6 = (in >> 48) & 0xff;
+		long b7 = (in >> 56) & 0xff;
+		return (b0 << 56) | (b1 << 48) | (b2 << 40) | (b3 << 32) | (b4 << 24) | (b5 << 16) | (b6 << 8) | (b7 << 0);
+	}
+ }
