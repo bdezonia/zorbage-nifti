@@ -84,15 +84,13 @@ public class Main {
 		int returnValue = jfc.showOpenDialog(null);
 
 		if (returnValue != JFileChooser.APPROVE_OPTION)
-			System.out.println("Abort Captain!");
+			System.exit(0);
 		
 		File file = jfc.getSelectedFile();
 		
 		System.out.println("File length = "+file.length());
 		
 		try {
-			byte[] buf128 = new byte[16];
-			
 			FileInputStream in = new FileInputStream(file);
 			
 			DataInputStream d = new DataInputStream(in);
@@ -102,6 +100,8 @@ public class Main {
 			short data_type = 0;
 			
 			boolean swapBytes = false;
+			
+			byte[] buf128 = new byte[16];
 			
 			int headerSize = d.readInt();
 			
@@ -166,15 +166,18 @@ public class Main {
 				float sd8 = readFloat(d, swapBytes);
 
 				float vox_offset = readFloat(d, swapBytes);
+				
 				float scl_slope = readFloat(d, swapBytes);
 				float scl_inter = readFloat(d, swapBytes);
 
 				short slice_end = readShort(d, swapBytes);
 				byte slice_code = readByte(d);
+				
 				byte xyzt_units = readByte(d);
 				
 				float cal_max = readFloat(d, swapBytes);
 				float cal_min = readFloat(d, swapBytes);
+				
 				float slice_duration = readFloat(d, swapBytes);
 				float toffset = readFloat(d, swapBytes);
 
@@ -312,8 +315,10 @@ public class Main {
 				
 				double scl_slope = readDouble(d, swapBytes);
 				double scl_inter = readDouble(d, swapBytes);
+				
 				double cal_max = readDouble(d, swapBytes);
 				double cal_min = readDouble(d, swapBytes);
+				
 				double slice_duration = readDouble(d, swapBytes);
 				double toffset = readDouble(d, swapBytes);
 
@@ -376,14 +381,24 @@ public class Main {
 				System.out.println("  maybe this is an old style ANALYZE data file");
 			}
 
-			byte ext0 = readByte(d);
-			byte ext1 = readByte(d);
-			byte ext2 = readByte(d);
-			byte ext3 = readByte(d);
-			
-			if (ext0 != 0) {
-				// has extensions. for now just gobble them
-			}
+			byte ext0, ext1, ext2, ext3;
+			do {
+				// I'm assuming after every extension there is another extension sentinel. docs are not clear. hopefully this works.
+				ext0 = readByte(d);
+				ext1 = readByte(d);
+				ext2 = readByte(d);
+				ext3 = readByte(d);
+				
+				if (ext0 != 0) {
+					// an extension is present. for now just skip past it.
+					int esize = readInt(d, swapBytes);
+					int ecode = readInt(d, swapBytes);
+					for (int i = 0; i < esize - 8; i++) {
+						readByte(d);
+					}
+					System.out.println("Extension found (and skipped) with code "+ecode);
+				}
+			} while (ext0 != 0);
 			
 			Allocatable type = value(data_type);
 
@@ -395,7 +410,7 @@ public class Main {
 			SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
 			while (itr.hasNext()) {
 				itr.next(idx);
-				readValue(d, data_type, type, swapBytes, buf128);
+				readValue(d, type, data_type, swapBytes, buf128);
 				data.set(idx, type);
 			}
 
@@ -448,7 +463,7 @@ public class Main {
 		}
 	}
 
-	private static void readValue(DataInputStream d, short data_type, Allocatable type, boolean swapBytes, byte[] buf128) throws IOException {
+	private static void readValue(DataInputStream d, Allocatable type, short data_type, boolean swapBytes, byte[] buf128) throws IOException {
 		byte tb;
 		short ts;
 		int ti;
@@ -621,23 +636,21 @@ public class Main {
 	}
 	
 	private static float readFloat(DataInputStream str, boolean swapBytes) throws IOException {
-		float v = str.readFloat();
 		if (swapBytes) {
-			int b = Float.floatToIntBits(v);
+			int b = str.readInt();
 			b = swapInt(b);
-			v = Float.intBitsToFloat(b);
+			return Float.intBitsToFloat(b);
 		}
-		return v;
+		return str.readFloat();
 	}
 	
 	private static double readDouble(DataInputStream str, boolean swapBytes) throws IOException {
-		double v = str.readDouble();
 		if (swapBytes) {
-			long b = Double.doubleToLongBits(v);
+			long b = str.readLong();
 			b = swapLong(b);
-			v = Double.longBitsToDouble(b);
+			return Double.longBitsToDouble(b);
 		}
-		return v;
+		return str.readDouble();
 	}
 	
 	private static BigDecimal readFloat128(DataInputStream str, boolean swapBytes, byte[] buffer) throws IOException {
