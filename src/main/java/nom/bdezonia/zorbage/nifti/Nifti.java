@@ -29,16 +29,15 @@ package nom.bdezonia.zorbage.nifti;
 /*
  * TODO
  * 1) permute axes as specified in a header variable so data is ordered correctly
- * 2) make a static reader class and then use it in zorbage-viewer
- * 3) use header data to improve translations and to tag things with correct metadata
+ * 2) use header data to improve translations and to tag things with correct metadata
  *    There are some data scaling constants that I am not applying to the data. Using
  *    it might require all data sets to be floating point though.
- * 4) support float 128 bit types (as highprecs for now)
- * 5) figure out how to support old Analyze files when detected
- * 6) deal with extension bytes after the header and before the pixel data
- * 7) support data intents from the intent codes in the header
- * 8) see this page for lots of good info: https://brainder.org/2012/09/23/the-nifti-file-format/
- * 9) there may be a 1-bit bool type referred to as data_type 1. I haven't found a lot of docs about it yet.
+ * 3) support float 128 bit types (as highprecs for now)
+ * 4) figure out how to support old Analyze files when detected
+ * 5) use extension bytes after the header and before the pixel data if it makes sense for translation
+ * 6) support data intents from the intent codes in the header
+ * 7) see this page for lots of good info: https://brainder.org/2012/09/23/the-nifti-file-format/
+ * 8) there may be a 1-bit bool type referred to as data_type 1. I haven't found a lot of docs about it yet.
  */
 
 import java.io.DataInputStream;
@@ -683,7 +682,7 @@ public class Nifti {
 			}
 		}
 		
-		// TODO: decode the 16 bytes as a IEEE 128 bit float and then decode that value as a BigDecimal.
+		// TODO: decode the 16 bytes here as a IEEE 128 bit float and then convert that value as a BigDecimal.
 		//   One gotcha: can't represent NaNs this way.
 		
 		return BigDecimal.ZERO;
