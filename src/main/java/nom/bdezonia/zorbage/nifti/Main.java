@@ -29,17 +29,16 @@ package nom.bdezonia.zorbage.nifti;
 /*
  * TODO
  * 1) permute axes as specified in a header variable so data is ordered correctly
- * 2) eliminate duplicate code
- * 3) make a static reader class and then use it in zorbage-viewer
- * 4) use header data to improve translations and to tag things with correct metadata
+ * 2) make a static reader class and then use it in zorbage-viewer
+ * 3) use header data to improve translations and to tag things with correct metadata
  *    There are some data scaling constants that I am not applying to the data. Using
  *    it might require all data sets to be floating point though.
- * 5) support float 128 bit types (as highprecs for now)
- * 6) figure out how to support old Analyze files when detected
- * 7) deal with extension bytes after the header and before the pixel data
- * 8) support data intents from the intent codes in the header
- * 9) see this page for lots of good info: https://brainder.org/2012/09/23/the-nifti-file-format/
- * 10) there may be a 1-bit bool type referred to as data_type 1. I haven't found a lot of docs about it yet.
+ * 4) support float 128 bit types (as highprecs for now)
+ * 5) figure out how to support old Analyze files when detected
+ * 6) deal with extension bytes after the header and before the pixel data
+ * 7) support data intents from the intent codes in the header
+ * 8) see this page for lots of good info: https://brainder.org/2012/09/23/the-nifti-file-format/
+ * 9) there may be a 1-bit bool type referred to as data_type 1. I haven't found a lot of docs about it yet.
  */
 
 import java.io.DataInputStream;
@@ -80,8 +79,6 @@ public class Main {
 
 	public static void main(String[] args) {
 		
-		DataBundle bundle = new DataBundle();
-		
 		JFileChooser jfc = new JFileChooser();
 
 		int returnValue = jfc.showOpenDialog(null);
@@ -99,6 +96,10 @@ public class Main {
 			FileInputStream in = new FileInputStream(file);
 			
 			DataInputStream d = new DataInputStream(in);
+
+			long[] dims = null;
+			
+			short data_type = 0;
 			
 			boolean swapBytes = false;
 			
@@ -131,7 +132,7 @@ public class Main {
 				short d6 = readShort(d, swapBytes);
 				short d7 = readShort(d, swapBytes);
 				
-				long[] dims = new long[numD];
+				dims = new long[numD];
 				for (int i = 0; i < numD; i++) {
 					if (i == 0) dims[0] = d1;
 					else if (i == 1) dims[1] = d2;
@@ -147,7 +148,7 @@ public class Main {
 				float intent_p3 = readFloat(d, swapBytes);
 				
 				short nifti_intent_code = readShort(d, swapBytes);
-				short data_type = readShort(d, swapBytes);
+				data_type = readShort(d, swapBytes);
 				short bitpix = readShort(d, swapBytes);
 				short slice_start = readShort(d, swapBytes);
 				
@@ -232,219 +233,6 @@ public class Main {
 					System.out.println("VALID and of type 1b");
 				else
 					System.out.println("INVALID type 1 header");
-
-				// BDZ HACK : i read somewhere that the data starts 4 bytes beyond end of header; is this the first link in the extension chain?
-				int jnk = readInt(d, swapBytes);
-				
-				Allocatable type = null;
-				
-				switch (data_type) {
-				case 2: // uint8
-					type = G.UINT8.construct();
-					break;
-				case 4: // int16
-					type = G.INT16.construct();
-					break;
-				case 8: // int32
-					type = G.INT32.construct();
-					break;
-				case 16: // float32
-					type = G.FLT.construct();
-					break;
-				case 32: // cfloat32
-					type = G.CFLT.construct();
-					break;
-				case 64: // float64
-					type = G.DBL.construct();
-					break;
-				case 128: // rgb
-					type = G.RGB.construct();
-					break;
-				case 256: // int8
-					type = G.INT8.construct();
-					break;
-				case 512: // uint16
-					type = G.UINT16.construct();
-					break;
-				case 768: // uint32
-					type = G.UINT32.construct();
-					break;
-				case 1024: // int64
-					type = G.INT64.construct();
-					break;
-				case 1280: // uint64
-					type = G.UINT64.construct();
-					break;
-				case 1536: // float128 : treat as highprec
-					type = G.HP.construct();
-					break;
-				case 1792: // cfloat64
-					type = G.CDBL.construct();
-					break;
-				case 2048: // cfloat128 : treat as highprec
-					type = G.CHP.construct();
-					break;
-				case 2304: // rgba
-					type = G.ARGB.construct();
-					break;
-				default:
-					System.out.println("Unknown data type! "+data_type);
-				}
-
-				System.out.println("dims = " + Arrays.toString(dims));
-				
-				DimensionedDataSource data = DimensionedStorage.allocate(type, dims);
-				
-				IntegerIndex idx = new IntegerIndex(dims.length);
-				SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
-				byte tb;
-				short ts;
-				int ti;
-				long tl;
-				float tf;
-				double td;
-				BigDecimal tbd;
-				while (itr.hasNext()) {
-					itr.next(idx);
-					switch (data_type) {
-					case 2: // uint8
-						tb = readByte(d);
-						((UnsignedInt8Member) type).setV(tb);
-						break;
-					case 4: // int16
-						ts = readShort(d, swapBytes);
-						((SignedInt16Member) type).setV(ts);
-						break;
-					case 8: // int32
-						ti = readInt(d, swapBytes);
-						((SignedInt32Member) type).setV(ti);
-						break;
-					case 16: // float32
-						tf = readFloat(d, swapBytes);
-						((Float32Member) type).setV(tf);
-						break;
-					case 32: // cfloat32
-						tf = readFloat(d, swapBytes);
-						((ComplexFloat32Member) type).setR(tf);
-						tf = readFloat(d, swapBytes);
-						((ComplexFloat32Member) type).setI(tf);
-						break;
-					case 64: // float64
-						td = readDouble(d, swapBytes);
-						((Float64Member) type).setV(td);
-						break;
-					case 128: // rgb
-						tb = readByte(d);
-						((RgbMember) type).setR(tb);
-						tb = readByte(d);
-						((RgbMember) type).setG(tb);
-						tb = readByte(d);
-						((RgbMember) type).setB(tb);
-						break;
-					case 256: // int8
-						tb = readByte(d);
-						((SignedInt8Member) type).setV(tb);
-						break;
-					case 512: // uint16
-						ts = readShort(d, swapBytes);
-						((UnsignedInt16Member) type).setV(ts);
-						break;
-					case 768: // uint32
-						ti = readInt(d, swapBytes);
-						((UnsignedInt32Member) type).setV(ti);
-						break;
-					case 1024: // int64
-						tl = readLong(d, swapBytes);
-						((SignedInt64Member) type).setV(tl);
-						break;
-					case 1280: // uint64
-						tl = readLong(d, swapBytes);
-						((UnsignedInt64Member) type).setV(tl);
-						break;
-					case 1536: // float128 : treat as highprec
-						tbd = readFloat128(d, swapBytes, buf128);
-						((HighPrecisionMember) type).setV(tbd);
-						break;
-					case 1792: // cfloat64
-						td = readDouble(d, swapBytes);
-						((ComplexFloat64Member) type).setR(td);
-						td = readDouble(d, swapBytes);
-						((ComplexFloat64Member) type).setI(td);
-						break;
-					case 2048: // cfloat128 : treat as highprec
-						tbd = readFloat128(d, swapBytes, buf128);
-						((ComplexHighPrecisionMember) type).setR(tbd);
-						tbd = readFloat128(d, swapBytes, buf128);
-						((ComplexHighPrecisionMember) type).setI(tbd);
-						break;
-					case 2304: // rgba
-						tb = readByte(d);
-						((ArgbMember) type).setR(tb);
-						tb = readByte(d);
-						((ArgbMember) type).setG(tb);
-						tb = readByte(d);
-						((ArgbMember) type).setB(tb);
-						tb = readByte(d);
-						((ArgbMember) type).setA(tb);
-						break;
-					default:
-						System.out.println("Unknown data type! "+data_type);
-					}
-					data.set(idx, type);
-				}
-				
-				switch (data_type) {
-				case 2: // uint8
-					bundle.mergeUInt8(data);
-					break;
-				case 4: // int16
-					bundle.mergeInt16(data);
-					break;
-				case 8: // int32
-					bundle.mergeInt32(data);
-					break;
-				case 16: // float32
-					bundle.mergeFlt32(data);
-					break;
-				case 32: // cfloat32
-					bundle.mergeComplexFlt32(data);
-					break;
-				case 64: // float64
-					bundle.mergeFlt64(data);
-					break;
-				case 128: // rgb
-					bundle.mergeRgb(data);
-					break;
-				case 256: // int8
-					bundle.mergeInt8(data);
-					break;
-				case 512: // uint16
-					bundle.mergeUInt16(data);
-					break;
-				case 768: // uint32
-					bundle.mergeUInt32(data);
-					break;
-				case 1024: // int64
-					bundle.mergeInt64(data);
-					break;
-				case 1280: // uint64
-					bundle.mergeUInt64(data);
-					break;
-				case 1536: // float128 : treat as highprec
-					bundle.mergeHP(data);
-					break;
-				case 1792: // cfloat64
-					bundle.mergeComplexFlt64(data);
-					break;
-				case 2048: // cfloat128 : treat as highprec
-					bundle.mergeComplexHP(data);
-					break;
-				case 2304: // rgba
-					bundle.mergeArgb(data);
-					break;
-				default:
-					System.out.println("Unknown data type! "+data_type);
-				}
 			}
 			else if (headerSize == 540 || swapInt(headerSize) == 540) {
 				
@@ -468,7 +256,7 @@ public class Main {
 				else
 					System.out.println("INVALID type 2 header");
 
-				short data_type = readShort(d, false);
+				data_type = readShort(d, false);
 				short bitpix = readShort(d, false);
 				
 				// pixel dimensions
@@ -486,7 +274,7 @@ public class Main {
 				long d6 = readLong(d, swapBytes);
 				long d7 = readLong(d, swapBytes);
 				
-				long[] dims = new long[(int)numD];
+				dims = new long[(int)numD];
 				for (int i = 0; i < numD; i++) {
 					if (i == 0) dims[0] = d1;
 					else if (i == 1) dims[1] = d2;
@@ -497,6 +285,7 @@ public class Main {
 					else if (i == 6) dims[6] = d7;
 				}
 
+				// some vars were read before we knew whether they needing swapping. swap them now.
 				if (swapBytes) {
 					data_type = swapShort(data_type);
 					bitpix = swapShort(bitpix);
@@ -581,229 +370,232 @@ public class Main {
 					// unused stuff
 					readByte(d);
 				}
-
-				// BDZ HACK : i read somewhere that the data starts 4 bytes beyond end of header; is this the first link in the extension chain?
-				int jnk = readInt(d, swapBytes);
-
-				Allocatable type = null;
-				
-				switch (data_type) {
-				case 2: // uint8
-					type = G.UINT8.construct();
-					break;
-				case 4: // int16
-					type = G.INT16.construct();
-					break;
-				case 8: // int32
-					type = G.INT32.construct();
-					break;
-				case 16: // float32
-					type = G.FLT.construct();
-					break;
-				case 32: // cfloat32
-					type = G.CFLT.construct();
-					break;
-				case 64: // float64
-					type = G.DBL.construct();
-					break;
-				case 128: // rgb
-					type = G.RGB.construct();
-					break;
-				case 256: // int8
-					type = G.INT8.construct();
-					break;
-				case 512: // uint16
-					type = G.UINT16.construct();
-					break;
-				case 768: // uint32
-					type = G.UINT32.construct();
-					break;
-				case 1024: // int64
-					type = G.INT64.construct();
-					break;
-				case 1280: // uint64
-					type = G.UINT64.construct();
-					break;
-				case 1536: // float128 : treat as highprec
-					type = G.HP.construct();
-					break;
-				case 1792: // cfloat64
-					type = G.CDBL.construct();
-					break;
-				case 2048: // cfloat128 : treat as highprec
-					type = G.CHP.construct();
-					break;
-				case 2304: // rgba
-					type = G.ARGB.construct();
-					break;
-				default:
-					System.out.println("Unknown data type! "+data_type);
-				}
-
-				System.out.println("dims = " + Arrays.toString(dims));
-				
-				DimensionedDataSource data = DimensionedStorage.allocate(type, dims);
-				
-				IntegerIndex idx = new IntegerIndex(dims.length);
-				SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
-				byte tb;
-				short ts;
-				int ti;
-				long tl;
-				float tf;
-				double td;
-				BigDecimal tbd;
-				while (itr.hasNext()) {
-					itr.next(idx);
-					switch (data_type) {
-					case 2: // uint8
-						tb = readByte(d);
-						((UnsignedInt8Member) type).setV(tb);
-						break;
-					case 4: // int16
-						ts = readShort(d, swapBytes);
-						((SignedInt16Member) type).setV(ts);
-						break;
-					case 8: // int32
-						ti = readInt(d, swapBytes);
-						((SignedInt32Member) type).setV(ti);
-						break;
-					case 16: // float32
-						tf = readFloat(d, swapBytes);
-						((Float32Member) type).setV(tf);
-						break;
-					case 32: // cfloat32
-						tf = readFloat(d, swapBytes);
-						((ComplexFloat32Member) type).setR(tf);
-						tf = readFloat(d, swapBytes);
-						((ComplexFloat32Member) type).setI(tf);
-						break;
-					case 64: // float64
-						td = readDouble(d, swapBytes);
-						((Float64Member) type).setV(td);
-						break;
-					case 128: // rgb
-						tb = readByte(d);
-						((RgbMember) type).setR(tb);
-						tb = readByte(d);
-						((RgbMember) type).setG(tb);
-						tb = readByte(d);
-						((RgbMember) type).setB(tb);
-						break;
-					case 256: // int8
-						tb = readByte(d);
-						((SignedInt8Member) type).setV(tb);
-						break;
-					case 512: // uint16
-						ts = readShort(d, swapBytes);
-						((UnsignedInt16Member) type).setV(ts);
-						break;
-					case 768: // uint32
-						ti = readInt(d, swapBytes);
-						((UnsignedInt32Member) type).setV(ti);
-						break;
-					case 1024: // int64
-						tl = readLong(d, swapBytes);
-						((SignedInt64Member) type).setV(tl);
-						break;
-					case 1280: // uint64
-						tl = readLong(d, swapBytes);
-						((UnsignedInt64Member) type).setV(tl);
-						break;
-					case 1536: // float128 : treat as highprec
-						tbd = readFloat128(d, swapBytes, buf128);
-						((HighPrecisionMember) type).setV(tbd);
-						break;
-					case 1792: // cfloat64
-						td = readDouble(d, swapBytes);
-						((ComplexFloat64Member) type).setR(td);
-						td = readDouble(d, swapBytes);
-						((ComplexFloat64Member) type).setI(td);
-						break;
-					case 2048: // cfloat128 : treat as highprec
-						tbd = readFloat128(d, swapBytes, buf128);
-						((ComplexHighPrecisionMember) type).setR(tbd);
-						tbd = readFloat128(d, swapBytes, buf128);
-						((ComplexHighPrecisionMember) type).setI(tbd);
-						break;
-					case 2304: // rgba
-						tb = readByte(d);
-						((ArgbMember) type).setR(tb);
-						tb = readByte(d);
-						((ArgbMember) type).setG(tb);
-						tb = readByte(d);
-						((ArgbMember) type).setB(tb);
-						tb = readByte(d);
-						((ArgbMember) type).setA(tb);
-						break;
-					default:
-						System.out.println("Unknown data type! "+data_type);
-					}
-					data.set(idx, type);
-				}
-				
-				switch (data_type) {
-				case 2: // uint8
-					bundle.mergeUInt8(data);
-					break;
-				case 4: // int16
-					bundle.mergeInt16(data);
-					break;
-				case 8: // int32
-					bundle.mergeInt32(data);
-					break;
-				case 16: // float32
-					bundle.mergeFlt32(data);
-					break;
-				case 32: // cfloat32
-					bundle.mergeComplexFlt32(data);
-					break;
-				case 64: // float64
-					bundle.mergeFlt64(data);
-					break;
-				case 128: // rgb
-					bundle.mergeRgb(data);
-					break;
-				case 256: // int8
-					bundle.mergeInt8(data);
-					break;
-				case 512: // uint16
-					bundle.mergeUInt16(data);
-					break;
-				case 768: // uint32
-					bundle.mergeUInt32(data);
-					break;
-				case 1024: // int64
-					bundle.mergeInt64(data);
-					break;
-				case 1280: // uint64
-					bundle.mergeUInt64(data);
-					break;
-				case 1536: // float128 : treat as highprec
-					bundle.mergeHP(data);
-					break;
-				case 1792: // cfloat64
-					bundle.mergeComplexFlt64(data);
-					break;
-				case 2048: // cfloat128 : treat as highprec
-					bundle.mergeComplexHP(data);
-					break;
-				case 2304: // rgba
-					bundle.mergeArgb(data);
-					break;
-				default:
-					System.out.println("Unknown data type! "+data_type);
-				}
 			}
 			else {
 				System.out.println("unknown header size  "+headerSize);
+				System.out.println("  maybe this is an old style ANALYZE data file");
+			}
+
+			byte ext0 = readByte(d);
+			byte ext1 = readByte(d);
+			byte ext2 = readByte(d);
+			byte ext3 = readByte(d);
+			
+			if (ext0 != 0) {
+				// has extensions. for now just gobble them
 			}
 			
+			Allocatable type = value(data_type);
+
+			System.out.println("dims = " + Arrays.toString(dims));
+			
+			DimensionedDataSource data = DimensionedStorage.allocate(type, dims);
+			
+			IntegerIndex idx = new IntegerIndex(dims.length);
+			SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
+			while (itr.hasNext()) {
+				itr.next(idx);
+				readValue(d, data_type, type, swapBytes, buf128);
+				data.set(idx, type);
+			}
+
+			DataBundle bundle = new DataBundle();
+			mergeData(bundle, data_type, data);
+
 			in.close();
 		} catch (Exception e) {
 			System.out.println(e);
 		}
 		System.out.println("DONE READING");
+	}
+	
+	private static Allocatable value(short data_type) {
+		switch (data_type) {
+		case 2: // uint8
+			return G.UINT8.construct();
+		case 4: // int16
+			return G.INT16.construct();
+		case 8: // int32
+			return G.INT32.construct();
+		case 16: // float32
+			return G.FLT.construct();
+		case 32: // cfloat32
+			return G.CFLT.construct();
+		case 64: // float64
+			return G.DBL.construct();
+		case 128: // rgb
+			return G.RGB.construct();
+		case 256: // int8
+			return G.INT8.construct();
+		case 512: // uint16
+			return G.UINT16.construct();
+		case 768: // uint32
+			return G.UINT32.construct();
+		case 1024: // int64
+			return G.INT64.construct();
+		case 1280: // uint64
+			return G.UINT64.construct();
+		case 1536: // float128 : treat as highprec
+			return G.HP.construct();
+		case 1792: // cfloat64
+			return G.CDBL.construct();
+		case 2048: // cfloat128 : treat as highprec
+			return G.CHP.construct();
+		case 2304: // rgba
+			return G.ARGB.construct();
+		default:
+			throw new IllegalArgumentException("Unknown data type! "+data_type);
+		}
+	}
+
+	private static void readValue(DataInputStream d, short data_type, Allocatable type, boolean swapBytes, byte[] buf128) throws IOException {
+		byte tb;
+		short ts;
+		int ti;
+		long tl;
+		float tf;
+		double td;
+		BigDecimal tbd;
+		switch (data_type) {
+		case 2: // uint8
+			tb = readByte(d);
+			((UnsignedInt8Member) type).setV(tb);
+			break;
+		case 4: // int16
+			ts = readShort(d, swapBytes);
+			((SignedInt16Member) type).setV(ts);
+			break;
+		case 8: // int32
+			ti = readInt(d, swapBytes);
+			((SignedInt32Member) type).setV(ti);
+			break;
+		case 16: // float32
+			tf = readFloat(d, swapBytes);
+			((Float32Member) type).setV(tf);
+			break;
+		case 32: // cfloat32
+			tf = readFloat(d, swapBytes);
+			((ComplexFloat32Member) type).setR(tf);
+			tf = readFloat(d, swapBytes);
+			((ComplexFloat32Member) type).setI(tf);
+			break;
+		case 64: // float64
+			td = readDouble(d, swapBytes);
+			((Float64Member) type).setV(td);
+			break;
+		case 128: // rgb
+			tb = readByte(d);
+			((RgbMember) type).setR(tb);
+			tb = readByte(d);
+			((RgbMember) type).setG(tb);
+			tb = readByte(d);
+			((RgbMember) type).setB(tb);
+			break;
+		case 256: // int8
+			tb = readByte(d);
+			((SignedInt8Member) type).setV(tb);
+			break;
+		case 512: // uint16
+			ts = readShort(d, swapBytes);
+			((UnsignedInt16Member) type).setV(ts);
+			break;
+		case 768: // uint32
+			ti = readInt(d, swapBytes);
+			((UnsignedInt32Member) type).setV(ti);
+			break;
+		case 1024: // int64
+			tl = readLong(d, swapBytes);
+			((SignedInt64Member) type).setV(tl);
+			break;
+		case 1280: // uint64
+			tl = readLong(d, swapBytes);
+			((UnsignedInt64Member) type).setV(tl);
+			break;
+		case 1536: // float128 : treat as highprec
+			tbd = readFloat128(d, swapBytes, buf128);
+			((HighPrecisionMember) type).setV(tbd);
+			break;
+		case 1792: // cfloat64
+			td = readDouble(d, swapBytes);
+			((ComplexFloat64Member) type).setR(td);
+			td = readDouble(d, swapBytes);
+			((ComplexFloat64Member) type).setI(td);
+			break;
+		case 2048: // cfloat128 : treat as highprec
+			tbd = readFloat128(d, swapBytes, buf128);
+			((ComplexHighPrecisionMember) type).setR(tbd);
+			tbd = readFloat128(d, swapBytes, buf128);
+			((ComplexHighPrecisionMember) type).setI(tbd);
+			break;
+		case 2304: // rgba
+			tb = readByte(d);
+			((ArgbMember) type).setR(tb);
+			tb = readByte(d);
+			((ArgbMember) type).setG(tb);
+			tb = readByte(d);
+			((ArgbMember) type).setB(tb);
+			tb = readByte(d);
+			((ArgbMember) type).setA(tb);
+			break;
+		default:
+			throw new IllegalArgumentException("Unknown data type! "+data_type);
+		}
+
+	}
+	
+	private static void mergeData(DataBundle bundle, short data_type, DimensionedDataSource data) {
+		switch (data_type) {
+		case 2: // uint8
+			bundle.mergeUInt8(data);
+			break;
+		case 4: // int16
+			bundle.mergeInt16(data);
+			break;
+		case 8: // int32
+			bundle.mergeInt32(data);
+			break;
+		case 16: // float32
+			bundle.mergeFlt32(data);
+			break;
+		case 32: // cfloat32
+			bundle.mergeComplexFlt32(data);
+			break;
+		case 64: // float64
+			bundle.mergeFlt64(data);
+			break;
+		case 128: // rgb
+			bundle.mergeRgb(data);
+			break;
+		case 256: // int8
+			bundle.mergeInt8(data);
+			break;
+		case 512: // uint16
+			bundle.mergeUInt16(data);
+			break;
+		case 768: // uint32
+			bundle.mergeUInt32(data);
+			break;
+		case 1024: // int64
+			bundle.mergeInt64(data);
+			break;
+		case 1280: // uint64
+			bundle.mergeUInt64(data);
+			break;
+		case 1536: // float128 : treat as highprec
+			bundle.mergeHP(data);
+			break;
+		case 1792: // cfloat64
+			bundle.mergeComplexFlt64(data);
+			break;
+		case 2048: // cfloat128 : treat as highprec
+			bundle.mergeComplexHP(data);
+			break;
+		case 2304: // rgba
+			bundle.mergeArgb(data);
+			break;
+		default:
+			throw new IllegalArgumentException("Unknown data type! "+data_type);
+		}
 	}
 	
 	private static byte readByte(DataInputStream str) throws IOException {
