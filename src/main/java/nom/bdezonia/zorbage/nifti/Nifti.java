@@ -90,10 +90,14 @@ public class Nifti {
 
 		System.out.println("File length = "+file.length());
 		
+		FileInputStream in = null;
+		
+		DataInputStream d = null;
+		
 		try {
-			FileInputStream in = new FileInputStream(file);
+			in = new FileInputStream(file);
 			
-			DataInputStream d = new DataInputStream(in);
+			d = new DataInputStream(in);
 
 			long[] dims = null;
 			
@@ -431,6 +435,14 @@ public class Nifti {
 
 		} catch (Exception e) {
 		
+			try {
+				if (d != null)
+					d.close();
+				else if (in != null)
+					in.close();
+			} catch (IOException x) {
+				;
+			}
 			System.out.println(e);
 			return new DataBundle();
 		}
