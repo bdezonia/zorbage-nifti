@@ -118,6 +118,8 @@ public class Nifti {
 			
 			String[] units;
 			
+			double toffset;
+			
 			int headerSize = d.readInt();
 			
 			if (headerSize == 348 || swapInt(headerSize) == 348) {
@@ -233,7 +235,7 @@ public class Nifti {
 				float cal_min = readFloat(d, swapBytes);
 				
 				float slice_duration = readFloat(d, swapBytes);
-				float toffset = readFloat(d, swapBytes);
+				toffset = readFloat(d, swapBytes);
 
 				for (int i = 0; i < 2; i++) {
 					readInt(d, swapBytes);
@@ -385,7 +387,7 @@ public class Nifti {
 				double cal_min = readDouble(d, swapBytes);
 				
 				double slice_duration = readDouble(d, swapBytes);
-				double toffset = readDouble(d, swapBytes);
+				toffset = readDouble(d, swapBytes);
 
 				long slice_start = readLong(d, swapBytes);
 				long slice_end = readLong(d, swapBytes);
@@ -555,7 +557,7 @@ public class Nifti {
 			if (numD > 3) {
 				data.setAxisType(3, "t");
 				data.setAxisUnit(3, units[3]);
-				data.setAxisEquation(3, new StringDefinedAxisEquation("" + spacings[3] + " * $0"));
+				data.setAxisEquation(3, new StringDefinedAxisEquation("" + toffset + " + " + spacings[3] + " * $0"));
 			}
 			if (numD > 4) {
 				data.setAxisType(4, "");
