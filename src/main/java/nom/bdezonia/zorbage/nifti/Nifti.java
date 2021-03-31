@@ -56,7 +56,6 @@ import nom.bdezonia.zorbage.axis.StringDefinedAxisEquation;
 import nom.bdezonia.zorbage.data.DimensionedDataSource;
 import nom.bdezonia.zorbage.data.DimensionedStorage;
 import nom.bdezonia.zorbage.misc.DataBundle;
-import nom.bdezonia.zorbage.procedure.Procedure2;
 import nom.bdezonia.zorbage.sampling.IntegerIndex;
 import nom.bdezonia.zorbage.sampling.SamplingIterator;
 import nom.bdezonia.zorbage.type.color.ArgbMember;
@@ -156,15 +155,13 @@ public class Nifti {
 				short d7 = readShort(d, swapBytes);
 				
 				dims = new long[(int)numD];
-				for (int i = 0; i < numD; i++) {
-					if (i == 0) dims[0] = d1;
-					else if (i == 1) dims[1] = d2;
-					else if (i == 2) dims[2] = d3;
-					else if (i == 3) dims[3] = d4;
-					else if (i == 4) dims[4] = d5;
-					else if (i == 5) dims[5] = d6;
-					else if (i == 6) dims[6] = d7;
-				}
+				if (numD > 0) dims[0] = d1;
+				if (numD > 1) dims[1] = d2;
+				if (numD > 2) dims[2] = d3;
+				if (numD > 3) dims[3] = d4;
+				if (numD > 4) dims[4] = d5;
+				if (numD > 5) dims[5] = d6;
+				if (numD > 6) dims[6] = d7;
 				
 				float intent_p1 = readFloat(d, swapBytes);
 				float intent_p2 = readFloat(d, swapBytes);
@@ -327,15 +324,13 @@ public class Nifti {
 				long d7 = readLong(d, swapBytes);
 				
 				dims = new long[(int)numD];
-				for (int i = 0; i < numD; i++) {
-					if (i == 0) dims[0] = d1;
-					else if (i == 1) dims[1] = d2;
-					else if (i == 2) dims[2] = d3;
-					else if (i == 3) dims[3] = d4;
-					else if (i == 4) dims[4] = d5;
-					else if (i == 5) dims[5] = d6;
-					else if (i == 6) dims[6] = d7;
-				}
+				if (numD > 0) dims[0] = d1;
+				if (numD > 1) dims[1] = d2;
+				if (numD > 2) dims[2] = d3;
+				if (numD > 3) dims[3] = d4;
+				if (numD > 4) dims[4] = d5;
+				if (numD > 5) dims[5] = d6;
+				if (numD > 6) dims[6] = d7;
 
 				// some vars were read before we knew whether they needing swapping. swap them now.
 				if (swapBytes) {
