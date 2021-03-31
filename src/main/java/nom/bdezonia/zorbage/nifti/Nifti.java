@@ -52,9 +52,11 @@ import java.util.Arrays;
 import nom.bdezonia.zorbage.algebra.Allocatable;
 import nom.bdezonia.zorbage.algebra.G;
 import nom.bdezonia.zorbage.algorithm.GridIterator;
+import nom.bdezonia.zorbage.axis.StringDefinedAxisEquation;
 import nom.bdezonia.zorbage.data.DimensionedDataSource;
 import nom.bdezonia.zorbage.data.DimensionedStorage;
 import nom.bdezonia.zorbage.misc.DataBundle;
+import nom.bdezonia.zorbage.procedure.Procedure2;
 import nom.bdezonia.zorbage.sampling.IntegerIndex;
 import nom.bdezonia.zorbage.sampling.SamplingIterator;
 import nom.bdezonia.zorbage.type.color.ArgbMember;
@@ -102,6 +104,8 @@ public class Nifti {
 			
 			d = new DataInputStream(in);
 
+			long numD;
+			
 			long[] dims = null;
 			
 			short data_type = 0;
@@ -109,6 +113,10 @@ public class Nifti {
 			boolean swapBytes = false;
 			
 			byte[] buf128 = new byte[16];
+			
+			double[] spacings;
+			
+			String[] units;
 			
 			int headerSize = d.readInt();
 			
@@ -126,9 +134,9 @@ public class Nifti {
 
 				// pixel dimensions
 				
-				short numD = readShort(d, false);
+				numD = readShort(d, false);
 				if (numD < 0 || numD > 7) {
-					numD = swapShort(numD);
+					numD = swapShort((short)numD);
 					swapBytes = true;
 				}
 				short d1 = readShort(d, swapBytes);
@@ -139,7 +147,7 @@ public class Nifti {
 				short d6 = readShort(d, swapBytes);
 				short d7 = readShort(d, swapBytes);
 				
-				dims = new long[numD];
+				dims = new long[(int)numD];
 				for (int i = 0; i < numD; i++) {
 					if (i == 0) dims[0] = d1;
 					else if (i == 1) dims[1] = d2;
@@ -163,6 +171,7 @@ public class Nifti {
 				
 				// pixel spacings
 				
+				float sd0 = readFloat(d, swapBytes);
 				float sd1 = readFloat(d, swapBytes);
 				float sd2 = readFloat(d, swapBytes);
 				float sd3 = readFloat(d, swapBytes);
@@ -170,8 +179,18 @@ public class Nifti {
 				float sd5 = readFloat(d, swapBytes);
 				float sd6 = readFloat(d, swapBytes);
 				float sd7 = readFloat(d, swapBytes);
-				float sd8 = readFloat(d, swapBytes);
 
+				spacings = new double[(int)numD];
+				for (int i = 0; i < numD; i++) {
+					if (i == 0) spacings[0] = sd1;
+					else if (i == 1) spacings[1] = sd2;
+					else if (i == 2) spacings[2] = sd3;
+					else if (i == 3) spacings[3] = sd4;
+					else if (i == 4) spacings[4] = sd5;
+					else if (i == 5) spacings[5] = sd6;
+					else if (i == 6) spacings[6] = sd7;
+				}
+				
 				float vox_offset = readFloat(d, swapBytes);
 				
 				float scl_slope = readFloat(d, swapBytes);
@@ -182,6 +201,34 @@ public class Nifti {
 				
 				byte xyzt_units = readByte(d);
 				
+				int v;
+				units = new String[(int)numD];
+				String space_units = "";
+				v = xyzt_units & 0x7;
+				if (v == 1) space_units = "meter";
+				if (v == 2) space_units = "mm";
+				if (v == 3) space_units = "micron";
+				String time_units = "";
+				v = xyzt_units & 0x38;
+				if (v == 6) time_units = "secs";
+				if (v == 16) time_units = "millisecs";
+				if (v == 24) time_units = "microsecs";
+				// do these apply to time axis or the other 3 upper indices?
+				if (v == 32) time_units = "hertz";
+				if (v == 40) time_units = "ppm";
+				if (v == 48) time_units = "rad/sec";
+				String other_units = "";
+
+				for (int i = 0; i < numD; i++) {
+					if (i == 0) units[0] = space_units;
+					else if (i == 1) units[1] = space_units;
+					else if (i == 2) units[2] = space_units;
+					else if (i == 3) units[3] = time_units;
+					else if (i == 4) units[4] = other_units;
+					else if (i == 5) units[5] = other_units;
+					else if (i == 6) units[6] = other_units;
+				}
+
 				float cal_max = readFloat(d, swapBytes);
 				float cal_min = readFloat(d, swapBytes);
 				
@@ -271,7 +318,7 @@ public class Nifti {
 				
 				// pixel dimensions
 				
-				long numD = readLong(d, false);
+				numD = readLong(d, false);
 				if (numD < 0 || numD > 7) {
 					numD = swapLong(numD);
 					swapBytes = true;
@@ -309,6 +356,7 @@ public class Nifti {
 				
 				// pixel spacings
 				
+				double sd0 = readDouble(d, swapBytes);
 				double sd1 = readDouble(d, swapBytes);
 				double sd2 = readDouble(d, swapBytes);
 				double sd3 = readDouble(d, swapBytes);
@@ -316,8 +364,18 @@ public class Nifti {
 				double sd5 = readDouble(d, swapBytes);
 				double sd6 = readDouble(d, swapBytes);
 				double sd7 = readDouble(d, swapBytes);
-				double sd8 = readDouble(d, swapBytes);
 
+				spacings = new double[(int)numD];
+				for (int i = 0; i < numD; i++) {
+					if (i == 0) spacings[0] = sd1;
+					else if (i == 1) spacings[1] = sd2;
+					else if (i == 2) spacings[2] = sd3;
+					else if (i == 3) spacings[3] = sd4;
+					else if (i == 4) spacings[4] = sd5;
+					else if (i == 5) spacings[5] = sd6;
+					else if (i == 6) spacings[6] = sd7;
+				}
+				
 				long vox_offset = readLong(d, swapBytes);
 				
 				double scl_slope = readDouble(d, swapBytes);
@@ -368,7 +426,37 @@ public class Nifti {
 				double z3 = readDouble(d, swapBytes);
 
 				int slice_code = readInt(d, swapBytes);
+				
 				int xyzt_units = readInt(d, swapBytes);
+
+				int v;
+				units = new String[(int)numD];
+				String space_units = "";
+				v = xyzt_units & 0x7;
+				if (v == 1) space_units = "meter";
+				if (v == 2) space_units = "mm";
+				if (v == 3) space_units = "micron";
+				String time_units = "";
+				v = xyzt_units & 0x38;
+				if (v == 6) time_units = "secs";
+				if (v == 16) time_units = "millisecs";
+				if (v == 24) time_units = "microsecs";
+				// do these apply to time axis or the other 3 upper indices?
+				if (v == 32) time_units = "hertz";
+				if (v == 40) time_units = "ppm";
+				if (v == 48) time_units = "rad/sec";
+				String other_units = "";
+
+				for (int i = 0; i < numD; i++) {
+					if (i == 0) units[0] = space_units;
+					else if (i == 1) units[1] = space_units;
+					else if (i == 2) units[2] = space_units;
+					else if (i == 3) units[3] = time_units;
+					else if (i == 4) units[4] = other_units;
+					else if (i == 5) units[5] = other_units;
+					else if (i == 6) units[6] = other_units;
+				}
+
 				int nifti_intent_code = readInt(d, swapBytes);
 				
 				for (int i = 0; i < 16; i++) {
@@ -435,6 +523,7 @@ public class Nifti {
 				}
 			}
 			else {
+				// all other types are straightforward
 				Allocatable type = value(data_type);
 				data = DimensionedStorage.allocate(type, dims);
 				IntegerIndex idx = new IntegerIndex(dims.length);
@@ -444,6 +533,44 @@ public class Nifti {
 					readValue(d, type, data_type, swapBytes, buf128);
 					data.set(idx, type);
 				}
+			}
+
+			data.setSource(filename);
+			
+			if (numD > 0) {
+				data.setAxisType(0, "x");
+				data.setAxisUnit(0, units[0]);
+				data.setAxisEquation(0, new StringDefinedAxisEquation("" + spacings[0] + " * $0"));
+			}
+			if (numD > 1) {
+				data.setAxisType(1, "y");
+				data.setAxisUnit(1, units[1]);
+				data.setAxisEquation(1, new StringDefinedAxisEquation("" + spacings[1] + " * $0"));
+			}
+			if (numD > 2) {
+				data.setAxisType(2, "z");
+				data.setAxisUnit(2, units[2]);
+				data.setAxisEquation(2, new StringDefinedAxisEquation("" + spacings[2] + " * $0"));
+			}
+			if (numD > 3) {
+				data.setAxisType(3, "t");
+				data.setAxisUnit(3, units[3]);
+				data.setAxisEquation(3, new StringDefinedAxisEquation("" + spacings[3] + " * $0"));
+			}
+			if (numD > 4) {
+				data.setAxisType(4, "");
+				data.setAxisUnit(4, units[4]);
+				data.setAxisEquation(4, new StringDefinedAxisEquation("" + spacings[4] + " * $0"));
+			}
+			if (numD > 5) {
+				data.setAxisType(5, "");
+				data.setAxisUnit(5, units[5]);
+				data.setAxisEquation(5, new StringDefinedAxisEquation("" + spacings[5] + " * $0"));
+			}
+			if (numD > 6) {
+				data.setAxisType(6, "");
+				data.setAxisUnit(6, units[6]);
+				data.setAxisEquation(6, new StringDefinedAxisEquation("" + spacings[6] + " * $0"));
 			}
 
 			DataBundle bundle = new DataBundle();
