@@ -120,6 +120,12 @@ public class Nifti {
 			
 			double toffset;
 			
+			String intent;
+			
+			String auxname;
+			
+			String description;
+			
 			int headerSize = d.readInt();
 			
 			if (headerSize == 348 || swapInt(headerSize) == 348) {
@@ -183,15 +189,13 @@ public class Nifti {
 				float sd7 = readFloat(d, swapBytes);
 
 				spacings = new double[(int)numD];
-				for (int i = 0; i < numD; i++) {
-					if (i == 0) spacings[0] = sd1;
-					else if (i == 1) spacings[1] = sd2;
-					else if (i == 2) spacings[2] = sd3;
-					else if (i == 3) spacings[3] = sd4;
-					else if (i == 4) spacings[4] = sd5;
-					else if (i == 5) spacings[5] = sd6;
-					else if (i == 6) spacings[6] = sd7;
-				}
+				if (numD > 0) spacings[0] = sd1;
+				if (numD > 1) spacings[1] = sd2;
+				if (numD > 2) spacings[2] = sd3;
+				if (numD > 3) spacings[3] = sd4;
+				if (numD > 4) spacings[4] = sd5;
+				if (numD > 5) spacings[5] = sd6;
+				if (numD > 6) spacings[6] = sd7;
 				
 				float vox_offset = readFloat(d, swapBytes);
 				
@@ -221,15 +225,13 @@ public class Nifti {
 				if (v == 48) time_units = "rad/sec";
 				String other_units = "";
 
-				for (int i = 0; i < numD; i++) {
-					if (i == 0) units[0] = space_units;
-					else if (i == 1) units[1] = space_units;
-					else if (i == 2) units[2] = space_units;
-					else if (i == 3) units[3] = time_units;
-					else if (i == 4) units[4] = other_units;
-					else if (i == 5) units[5] = other_units;
-					else if (i == 6) units[6] = other_units;
-				}
+				if (numD > 0) units[0] = space_units;
+				if (numD > 1) units[1] = space_units;
+				if (numD > 2) units[2] = space_units;
+				if (numD > 3) units[3] = time_units;
+				if (numD > 4) units[4] = other_units;
+				if (numD > 5) units[5] = other_units;
+				if (numD > 6) units[6] = other_units;
 
 				float cal_max = readFloat(d, swapBytes);
 				float cal_min = readFloat(d, swapBytes);
@@ -241,15 +243,9 @@ public class Nifti {
 					readInt(d, swapBytes);
 				}
 
-				for (int i = 0; i < 80; i++) {
-					// TODO: description string: build it
-					readByte(d);
-				}
+				description = readString(d, 80);
 
-				for (int i = 0; i < 24; i++) {
-					// TODO: aux filename string: build it
-					readByte(d);
-				}
+				auxname = readString(d, 24);
 
 				short qform_code = readShort(d, swapBytes);
 				short sform_code = readShort(d, swapBytes);
@@ -276,10 +272,7 @@ public class Nifti {
 				float z2 = readFloat(d, swapBytes);
 				float z3 = readFloat(d, swapBytes);
 
-				for (int i = 0; i < 16; i++) {
-					// TODO: intent_name string: build it
-					readByte(d);
-				}
+				intent = readString(d, 16);
 
 				byte magic0 = readByte(d);
 				byte magic1 = readByte(d);
@@ -368,15 +361,13 @@ public class Nifti {
 				double sd7 = readDouble(d, swapBytes);
 
 				spacings = new double[(int)numD];
-				for (int i = 0; i < numD; i++) {
-					if (i == 0) spacings[0] = sd1;
-					else if (i == 1) spacings[1] = sd2;
-					else if (i == 2) spacings[2] = sd3;
-					else if (i == 3) spacings[3] = sd4;
-					else if (i == 4) spacings[4] = sd5;
-					else if (i == 5) spacings[5] = sd6;
-					else if (i == 6) spacings[6] = sd7;
-				}
+				if (numD > 0) spacings[0] = sd1;
+				if (numD > 1) spacings[1] = sd2;
+				if (numD > 2) spacings[2] = sd3;
+				if (numD > 3) spacings[3] = sd4;
+				if (numD > 4) spacings[4] = sd5;
+				if (numD > 5) spacings[5] = sd6;
+				if (numD > 6) spacings[6] = sd7;
 				
 				long vox_offset = readLong(d, swapBytes);
 				
@@ -392,15 +383,9 @@ public class Nifti {
 				long slice_start = readLong(d, swapBytes);
 				long slice_end = readLong(d, swapBytes);
 
-				for (int i = 0; i < 80; i++) {
-					// TODO: description string: build it
-					readByte(d);
-				}
+				description = readString(d, 80);
 
-				for (int i = 0; i < 24; i++) {
-					// TODO: aux filename string: build it
-					readByte(d);
-				}
+				auxname = readString(d, 24);
 
 				int qform_code = readInt(d, swapBytes);
 				int sform_code = readInt(d, swapBytes);
@@ -449,22 +434,17 @@ public class Nifti {
 				if (v == 48) time_units = "rad/sec";
 				String other_units = "";
 
-				for (int i = 0; i < numD; i++) {
-					if (i == 0) units[0] = space_units;
-					else if (i == 1) units[1] = space_units;
-					else if (i == 2) units[2] = space_units;
-					else if (i == 3) units[3] = time_units;
-					else if (i == 4) units[4] = other_units;
-					else if (i == 5) units[5] = other_units;
-					else if (i == 6) units[6] = other_units;
-				}
+				if (numD > 0) units[0] = space_units;
+				if (numD > 1) units[1] = space_units;
+				if (numD > 2) units[2] = space_units;
+				if (numD > 3) units[3] = time_units;
+				if (numD > 4) units[4] = other_units;
+				if (numD > 5) units[5] = other_units;
+				if (numD > 6) units[6] = other_units;
 
 				int nifti_intent_code = readInt(d, swapBytes);
 				
-				for (int i = 0; i < 16; i++) {
-					// TODO: intent_name string: build it
-					readByte(d);
-				}
+				intent = readString(d, 16);
 
 				byte dimInfo = readByte(d);
 				
@@ -575,6 +555,12 @@ public class Nifti {
 				data.setAxisEquation(6, new StringDefinedAxisEquation("" + spacings[6] + " * $0"));
 			}
 
+			data.metadata().put("auxiliary file name", auxname);
+			
+			data.metadata().put("description", description);
+			
+			data.metadata().put("intent", intent);
+			
 			DataBundle bundle = new DataBundle();
 			
 			mergeData(bundle, data_type, data);
@@ -650,7 +636,7 @@ public class Nifti {
 		double td;
 		BigDecimal tbd;
 		switch (data_type) {
-		case 1:
+		case 1: // bit
 			throw new IllegalArgumentException("bit types should never pass through this routine");
 		case 2: // uint8
 			tb = readByte(d);
@@ -834,6 +820,21 @@ public class Nifti {
 			return Double.longBitsToDouble(b);
 		}
 		return str.readDouble();
+	}
+
+	private static String readString(DataInputStream d, int maxChars) throws IOException {
+		String str = "";
+		boolean done = false;
+		for (int i = 0; i < maxChars; i++) {
+			char ch = (char) readByte(d);
+			if (ch == 0) {
+				done = true;
+			}
+			if (!done) {
+				str += ch;
+			}
+		}
+		return str;
 	}
 	
 	private static BigDecimal readFloat128(DataInputStream str, boolean swapBytes, byte[] buffer) throws IOException {
