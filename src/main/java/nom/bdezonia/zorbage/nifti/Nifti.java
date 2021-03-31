@@ -34,11 +34,12 @@ package nom.bdezonia.zorbage.nifti;
  *    it might require all data sets to be floating point though.
  * 3) support float 128 bit types (as highprecs for now)
  * 4) figure out how to support old Analyze files when detected
- * 5) use extension bytes after the header and before the pixel data if it makes sense for translation
+ * 5) support published extensions if they makes sense for translation
  * 6) support data intents from the intent codes in the header
  * 7) see this page for lots of good info: https://brainder.org/2012/09/23/the-nifti-file-format/
- * 8) there may be a 1-bit bool type referred to as data_type 1. I haven't found a lot of docs about it yet.
- *      One question: does endianness in any way affect the bit order to scan first (hi vs lo).
+ * 8) the 1-bit bool type is hinted at. I haven't found a lot of docs about it yet. do the bytes
+ *      always only have unused space in the column direction? Also does endianness in any way affect
+ *      the bit order to scan first (hi vs lo).
  */
 
 import java.io.DataInputStream;
@@ -61,6 +62,7 @@ import nom.bdezonia.zorbage.type.color.RgbMember;
 import nom.bdezonia.zorbage.type.complex.float32.ComplexFloat32Member;
 import nom.bdezonia.zorbage.type.complex.float64.ComplexFloat64Member;
 import nom.bdezonia.zorbage.type.complex.highprec.ComplexHighPrecisionMember;
+import nom.bdezonia.zorbage.type.integer.int1.UnsignedInt1Member;
 import nom.bdezonia.zorbage.type.integer.int16.SignedInt16Member;
 import nom.bdezonia.zorbage.type.integer.int16.UnsignedInt16Member;
 import nom.bdezonia.zorbage.type.integer.int32.SignedInt32Member;
@@ -410,18 +412,38 @@ public class Nifti {
 				}
 			} while (ext0 != 0);
 			
-			Allocatable type = value(data_type);
-
 			System.out.println("dims = " + Arrays.toString(dims));
+
+			DimensionedDataSource data;
 			
-			DimensionedDataSource data = DimensionedStorage.allocate(type, dims);
-			
-			IntegerIndex idx = new IntegerIndex(dims.length);
-			SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
-			while (itr.hasNext()) {
-				itr.next(idx);
-				readValue(d, type, data_type, swapBytes, buf128);
-				data.set(idx, type);
+			// NIFTI bit data requires a little different approach
+			if (data_type == 1) {
+				UnsignedInt1Member pix = G.UINT1.construct();
+				data = DimensionedStorage.allocate(pix, dims);
+				IntegerIndex idx = new IntegerIndex(dims.length);
+				SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
+				byte bucket = 0;
+				while (itr.hasNext()) {
+					itr.next(idx);
+					int bitNum = (int) (idx.get(0) % 8); 
+					if (bitNum == 0) {
+						bucket = readByte(d);
+					}
+					int val = (bucket & (1 << bitNum)) > 0 ? 1 : 0;
+					pix.setV(val);
+					data.set(idx, pix);
+				}
+			}
+			else {
+				Allocatable type = value(data_type);
+				data = DimensionedStorage.allocate(type, dims);
+				IntegerIndex idx = new IntegerIndex(dims.length);
+				SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
+				while (itr.hasNext()) {
+					itr.next(idx);
+					readValue(d, type, data_type, swapBytes, buf128);
+					data.set(idx, type);
+				}
 			}
 
 			DataBundle bundle = new DataBundle();
@@ -451,6 +473,8 @@ public class Nifti {
 	
 	private static Allocatable value(short data_type) {
 		switch (data_type) {
+		case 1: // bit
+			throw new IllegalArgumentException("bit types should never pass through this routine");
 		case 2: // uint8
 			return G.UINT8.construct();
 		case 4: // int16
@@ -497,6 +521,8 @@ public class Nifti {
 		double td;
 		BigDecimal tbd;
 		switch (data_type) {
+		case 1:
+			throw new IllegalArgumentException("bit types should never pass through this routine");
 		case 2: // uint8
 			tb = readByte(d);
 			((UnsignedInt8Member) type).setV(tb);
@@ -585,6 +611,9 @@ public class Nifti {
 	
 	private static void mergeData(DataBundle bundle, short data_type, DimensionedDataSource data) {
 		switch (data_type) {
+		case 1: // bit
+			bundle.mergeUInt1(data);  // bit types passing through this routine is okay
+			break;
 		case 2: // uint8
 			bundle.mergeUInt8(data);
 			break;
