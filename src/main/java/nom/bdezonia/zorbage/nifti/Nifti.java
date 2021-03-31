@@ -38,6 +38,7 @@ package nom.bdezonia.zorbage.nifti;
  * 6) support data intents from the intent codes in the header
  * 7) see this page for lots of good info: https://brainder.org/2012/09/23/the-nifti-file-format/
  * 8) there may be a 1-bit bool type referred to as data_type 1. I haven't found a lot of docs about it yet.
+ *      One question: does endianness in any way affect the bit order to scan first (hi vs lo).
  */
 
 import java.io.DataInputStream;
@@ -342,12 +343,12 @@ public class Nifti {
 				int qform_code = readInt(d, swapBytes);
 				int sform_code = readInt(d, swapBytes);
 
-				double quatern_b = readFloat(d, swapBytes);
-				double quatern_c = readFloat(d, swapBytes);
-				double quatern_d = readFloat(d, swapBytes);
-				double qoffset_x = readFloat(d, swapBytes);
-				double qoffset_y = readFloat(d, swapBytes);
-				double qoffset_z = readFloat(d, swapBytes);
+				double quatern_b = readDouble(d, swapBytes);
+				double quatern_c = readDouble(d, swapBytes);
+				double quatern_d = readDouble(d, swapBytes);
+				double qoffset_x = readDouble(d, swapBytes);
+				double qoffset_y = readDouble(d, swapBytes);
+				double qoffset_z = readDouble(d, swapBytes);
 
 				// affine transform : row 0 = x, row 1 = y, row 2 = z
 				
@@ -427,10 +428,10 @@ public class Nifti {
 			
 			mergeData(bundle, data_type, data);
 
+			System.out.println("DONE READING : bytes remaining in file = "+in.available());
+			
 			d.close();
 			
-			System.out.println("DONE READING");
-
 			return bundle;
 
 		} catch (Exception e) {
