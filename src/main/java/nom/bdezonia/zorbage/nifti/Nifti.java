@@ -28,7 +28,8 @@ package nom.bdezonia.zorbage.nifti;
 
 /*
  * TODO
- * 1) permute axes as specified in a header variable so data is ordered correctly
+ * 1) permute axes as specified in a header variable so data is ordered correctly.
+ *    I might need to reverse some axes as well.
  * 2) use header data to improve translations and to tag things with correct metadata
  *    There are some data scaling constants that I am not applying to the data. Using
  *    it might require all data sets to be floating point though.
@@ -423,7 +424,6 @@ public class Nifti {
 				if (v == 6) time_units = "secs";
 				if (v == 16) time_units = "millisecs";
 				if (v == 24) time_units = "microsecs";
-				// do these apply to time axis or the other 3 upper indices?
 				if (v == 32) time_units = "hertz";
 				if (v == 40) time_units = "ppm";
 				if (v == 48) time_units = "rad/sec";
@@ -485,7 +485,7 @@ public class Nifti {
 			if (data_type == 1) {
 				UnsignedInt1Member pix = G.UINT1.construct();
 				data = DimensionedStorage.allocate(pix, dims);
-				IntegerIndex idx = new IntegerIndex(dims.length);
+				IntegerIndex idx = new IntegerIndex(data.numDimensions());
 				SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
 				byte bucket = 0;
 				while (itr.hasNext()) {
@@ -503,7 +503,7 @@ public class Nifti {
 				// all other types are straightforward
 				Allocatable type = value(data_type);
 				data = DimensionedStorage.allocate(type, dims);
-				IntegerIndex idx = new IntegerIndex(dims.length);
+				IntegerIndex idx = new IntegerIndex(data.numDimensions());
 				SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
 				while (itr.hasNext()) {
 					itr.next(idx);
@@ -512,6 +512,8 @@ public class Nifti {
 				}
 			}
 
+			data.setName("nifti file");
+			
 			data.setSource(filename);
 			
 			if (numD > 0) {
