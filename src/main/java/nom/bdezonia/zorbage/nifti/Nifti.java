@@ -26,6 +26,8 @@
  */
 package nom.bdezonia.zorbage.nifti;
 
+import java.io.BufferedInputStream;
+
 /*
  * TODO
  * 1) permute axes (and reverse dims?) as specified in a header variable so data is ordered correctly.
@@ -103,7 +105,9 @@ public class Nifti {
 		try {
 			in = new FileInputStream(file);
 			
-			d = new DataInputStream(in);
+			BufferedInputStream bf = new BufferedInputStream(in);
+			
+			d = new DataInputStream(bf);
 
 			long numD;
 			
