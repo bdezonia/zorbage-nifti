@@ -31,9 +31,7 @@ package nom.bdezonia.zorbage.nifti;
  * 1) permute axes as specified in a header variable so data is ordered correctly.
  *    I might need to reverse some axes as well.
  * 2) use header data to improve translations and to tag things with correct metadata
- *    There are some data scaling constants that I am not applying to the data. Using
- *    it might require all data sets to be floating point though.
- * 3) support float 128 bit types (as highprecs for now)
+ * 3) support float 128 bit ieee types when zorbage provides them
  * 4) figure out how to support old Analyze files when detected
  * 5) support published extensions if they makes sense for translation
  * 6) support data intents from the intent codes in the header
@@ -53,10 +51,13 @@ import java.util.Arrays;
 import nom.bdezonia.zorbage.algebra.Allocatable;
 import nom.bdezonia.zorbage.algebra.G;
 import nom.bdezonia.zorbage.algorithm.GridIterator;
+import nom.bdezonia.zorbage.algorithm.Transform2;
 import nom.bdezonia.zorbage.axis.StringDefinedAxisEquation;
 import nom.bdezonia.zorbage.data.DimensionedDataSource;
 import nom.bdezonia.zorbage.data.DimensionedStorage;
+import nom.bdezonia.zorbage.datasource.IndexedDataSource;
 import nom.bdezonia.zorbage.misc.DataBundle;
+import nom.bdezonia.zorbage.procedure.Procedure2;
 import nom.bdezonia.zorbage.sampling.IntegerIndex;
 import nom.bdezonia.zorbage.sampling.SamplingIterator;
 import nom.bdezonia.zorbage.type.color.ArgbMember;
@@ -109,6 +110,10 @@ public class Nifti {
 			long[] dims = null;
 			
 			short data_type = 0;
+			
+			double scl_slope;
+			
+			double scl_inter;
 			
 			boolean swapBytes = false;
 			
@@ -197,8 +202,8 @@ public class Nifti {
 				
 				float vox_offset = readFloat(d, swapBytes);
 				
-				float scl_slope = readFloat(d, swapBytes);
-				float scl_inter = readFloat(d, swapBytes);
+				scl_slope = readFloat(d, swapBytes);
+				scl_inter = readFloat(d, swapBytes);
 
 				short slice_end = readShort(d, swapBytes);
 				byte slice_code = readByte(d);
@@ -367,8 +372,8 @@ public class Nifti {
 				
 				long vox_offset = readLong(d, swapBytes);
 				
-				double scl_slope = readDouble(d, swapBytes);
-				double scl_inter = readDouble(d, swapBytes);
+				scl_slope = readDouble(d, swapBytes);
+				scl_inter = readDouble(d, swapBytes);
 				
 				double cal_max = readDouble(d, swapBytes);
 				double cal_min = readDouble(d, swapBytes);
@@ -498,6 +503,9 @@ public class Nifti {
 					pix.setV(val);
 					data.set(idx, pix);
 				}
+				if (scl_slope != 1 || scl_inter != 0) {
+					data = scale(data, pix, scl_slope, scl_inter);
+				}
 			}
 			else {
 				// all other types are straightforward
@@ -510,8 +518,13 @@ public class Nifti {
 					readValue(d, type, data_type, swapBytes, buf128);
 					data.set(idx, type);
 				}
+				if (scl_slope != 1 || scl_inter != 0) {
+					data = scale(data, type, scl_slope, scl_inter);
+				}
 			}
 
+			System.out.println("DONE READING : bytes remaining in file = "+in.available());
+			
 			data.setName("nifti file");
 			
 			data.setSource(filename);
@@ -562,8 +575,6 @@ public class Nifti {
 			
 			mergeData(bundle, data_type, data);
 
-			System.out.println("DONE READING : bytes remaining in file = "+in.available());
-			
 			d.close();
 			
 			return bundle;
@@ -777,6 +788,183 @@ public class Nifti {
 		default:
 			throw new IllegalArgumentException("Unknown data type! "+data_type);
 		}
+	}
+
+	private static DimensionedDataSource<?> scale(DimensionedDataSource<?> data, Allocatable type, double slope, double intercept) {
+		DimensionedDataSource<?> returnDs = null;
+		long[] dims = new long[data.numDimensions()];
+		for (int i = 0; i < dims.length; i++) {
+			dims[i] = data.dimension(i);
+		}
+		if (type instanceof UnsignedInt1Member) {
+			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
+			Procedure2<UnsignedInt1Member,Float64Member> proc = new Procedure2<UnsignedInt1Member,Float64Member>() {
+				@Override
+				public void call(UnsignedInt1Member a, Float64Member b) {
+					b.setV(a.v() * slope + intercept);
+				}
+			};
+			Transform2.compute(G.UINT1, G.DBL, proc, (IndexedDataSource<UnsignedInt1Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+		}
+		else if (type instanceof UnsignedInt8Member) {
+			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
+			Procedure2<UnsignedInt8Member,Float64Member> proc = new Procedure2<UnsignedInt8Member,Float64Member>() {
+				@Override
+				public void call(UnsignedInt8Member a, Float64Member b) {
+					b.setV(a.v() * slope + intercept);
+				}
+			};
+			Transform2.compute(G.UINT8, G.DBL, proc, (IndexedDataSource<UnsignedInt8Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+		}
+		else if (type instanceof SignedInt8Member) {
+			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
+			Procedure2<SignedInt8Member,Float64Member> proc = new Procedure2<SignedInt8Member,Float64Member>() {
+				@Override
+				public void call(SignedInt8Member a, Float64Member b) {
+					b.setV(a.v() * slope + intercept);
+				}
+			};
+			Transform2.compute(G.INT8, G.DBL, proc, (IndexedDataSource<SignedInt8Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+		}
+		else if (type instanceof UnsignedInt16Member) {
+			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
+			Procedure2<UnsignedInt16Member,Float64Member> proc = new Procedure2<UnsignedInt16Member,Float64Member>() {
+				@Override
+				public void call(UnsignedInt16Member a, Float64Member b) {
+					b.setV(a.v() * slope + intercept);
+				}
+			};
+			Transform2.compute(G.UINT16, G.DBL, proc, (IndexedDataSource<UnsignedInt16Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+		}
+		else if (type instanceof SignedInt16Member) {
+			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
+			Procedure2<SignedInt16Member,Float64Member> proc = new Procedure2<SignedInt16Member,Float64Member>() {
+				@Override
+				public void call(SignedInt16Member a, Float64Member b) {
+					b.setV(a.v() * slope + intercept);
+				}
+			};
+			Transform2.compute(G.INT16, G.DBL, proc, (IndexedDataSource<SignedInt16Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+		}
+		else if (type instanceof UnsignedInt32Member) {
+			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
+			Procedure2<UnsignedInt32Member,Float64Member> proc = new Procedure2<UnsignedInt32Member,Float64Member>() {
+				@Override
+				public void call(UnsignedInt32Member a, Float64Member b) {
+					b.setV(a.v() * slope + intercept);
+				}
+			};
+			Transform2.compute(G.UINT32, G.DBL, proc, (IndexedDataSource<UnsignedInt32Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+		}
+		else if (type instanceof SignedInt32Member) {
+			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
+			Procedure2<SignedInt32Member,Float64Member> proc = new Procedure2<SignedInt32Member,Float64Member>() {
+				@Override
+				public void call(SignedInt32Member a, Float64Member b) {
+					b.setV(a.v() * slope + intercept);
+				}
+			};
+			Transform2.compute(G.INT32, G.DBL, proc, (IndexedDataSource<SignedInt32Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+		}
+		else if (type instanceof UnsignedInt64Member) {
+			returnDs = DimensionedStorage.allocate(G.HP.construct(), dims);
+			Procedure2<UnsignedInt64Member,HighPrecisionMember> proc = new Procedure2<UnsignedInt64Member,HighPrecisionMember>() {
+				@Override
+				public void call(UnsignedInt64Member a, HighPrecisionMember b) {
+					BigDecimal val = new BigDecimal(a.v()).multiply(BigDecimal.valueOf(slope)).add(BigDecimal.valueOf(intercept)); 
+					b.setV(val);
+				}
+			};
+			Transform2.compute(G.UINT64, G.HP, proc, (IndexedDataSource<UnsignedInt64Member>) data.rawData(), (IndexedDataSource<HighPrecisionMember>) returnDs.rawData());
+		}
+		else if (type instanceof SignedInt64Member) {
+			returnDs = DimensionedStorage.allocate(G.HP.construct(), dims);
+			Procedure2<SignedInt64Member,HighPrecisionMember> proc = new Procedure2<SignedInt64Member,HighPrecisionMember>() {
+				@Override
+				public void call(SignedInt64Member a, HighPrecisionMember b) {
+					BigDecimal val = new BigDecimal(a.v()).multiply(BigDecimal.valueOf(slope)).add(BigDecimal.valueOf(intercept)); 
+					b.setV(val);
+				}
+			};
+			Transform2.compute(G.INT64, G.HP, proc, (IndexedDataSource<SignedInt64Member>) data.rawData(), (IndexedDataSource<HighPrecisionMember>) returnDs.rawData());
+		}
+		else if (type instanceof Float32Member) {
+			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
+			Procedure2<Float32Member,Float64Member> proc = new Procedure2<Float32Member,Float64Member>() {
+				@Override
+				public void call(Float32Member a, Float64Member b) {
+					b.setV(a.v() * slope + intercept);
+				}
+			};
+			Transform2.compute(G.FLT, G.DBL, proc, (IndexedDataSource<Float32Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+		}
+		else if (type instanceof ComplexFloat32Member) {
+			returnDs = DimensionedStorage.allocate(G.CDBL.construct(), dims);
+			Procedure2<ComplexFloat32Member,ComplexFloat64Member> proc = new Procedure2<ComplexFloat32Member,ComplexFloat64Member>() {
+				@Override
+				public void call(ComplexFloat32Member a, ComplexFloat64Member b) {
+					b.setR(a.r() * slope + intercept);
+					b.setI(a.i() * slope + intercept);
+				}
+			};
+			Transform2.compute(G.CFLT, G.CDBL, proc, (IndexedDataSource<ComplexFloat32Member>) data.rawData(), (IndexedDataSource<ComplexFloat64Member>) returnDs.rawData());
+		}
+		else if (type instanceof Float64Member) {
+			returnDs = data;
+			Procedure2<Float64Member,Float64Member> proc = new Procedure2<Float64Member,Float64Member>() {
+				@Override
+				public void call(Float64Member a, Float64Member b) {
+					b.setV(a.v() * slope + intercept);
+				}
+			};
+			Transform2.compute(G.DBL, G.DBL, proc, (IndexedDataSource<Float64Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+		}
+		else if (type instanceof ComplexFloat64Member) {
+			returnDs = data;
+			Procedure2<ComplexFloat64Member,ComplexFloat64Member> proc = new Procedure2<ComplexFloat64Member,ComplexFloat64Member>() {
+				@Override
+				public void call(ComplexFloat64Member a, ComplexFloat64Member b) {
+					b.setR(a.r() * slope + intercept);
+					b.setI(a.i() * slope + intercept);
+				}
+			};
+			Transform2.compute(G.CDBL, G.CDBL, proc, (IndexedDataSource<ComplexFloat64Member>) data.rawData(), (IndexedDataSource<ComplexFloat64Member>) returnDs.rawData());
+		}
+		else if (type instanceof HighPrecisionMember) {
+			returnDs = data;
+			Procedure2<HighPrecisionMember,HighPrecisionMember> proc = new Procedure2<HighPrecisionMember,HighPrecisionMember>() {
+				@Override
+				public void call(HighPrecisionMember a, HighPrecisionMember b) {
+					BigDecimal val = a.v().multiply(BigDecimal.valueOf(slope)).add(BigDecimal.valueOf(intercept)); 
+					b.setV(val);
+				}
+			};
+			Transform2.compute(G.HP, G.HP, proc, (IndexedDataSource<HighPrecisionMember>) data.rawData(), (IndexedDataSource<HighPrecisionMember>) returnDs.rawData());
+		}
+		else if (type instanceof ComplexHighPrecisionMember) {
+			returnDs = data;
+			Procedure2<ComplexHighPrecisionMember,ComplexHighPrecisionMember> proc = new Procedure2<ComplexHighPrecisionMember,ComplexHighPrecisionMember>() {
+				@Override
+				public void call(ComplexHighPrecisionMember a, ComplexHighPrecisionMember b) {
+					BigDecimal r = a.r().multiply(BigDecimal.valueOf(slope)).add(BigDecimal.valueOf(intercept)); 
+					BigDecimal i = a.i().multiply(BigDecimal.valueOf(slope)).add(BigDecimal.valueOf(intercept)); 
+					b.setR(r);
+					b.setR(i);
+				}
+			};
+			Transform2.compute(G.CHP, G.CHP, proc, (IndexedDataSource<ComplexHighPrecisionMember>) data.rawData(), (IndexedDataSource<ComplexHighPrecisionMember>) returnDs.rawData());
+		}
+		else if (type instanceof RgbMember) {
+			// do not scale color data
+			returnDs = data;
+		}
+		else if (type instanceof ArgbMember) {
+			// do not scale color data
+			returnDs = data;
+		}
+		else
+			throw new IllegalArgumentException("Unknown data type! passed to scale() method");
+		return returnDs;
 	}
 	
 	private static byte readByte(DataInputStream str) throws IOException {
