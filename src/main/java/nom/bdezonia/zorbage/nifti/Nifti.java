@@ -28,9 +28,8 @@ package nom.bdezonia.zorbage.nifti;
 
 /*
  * TODO
- * 1) permute axes as specified in a header variable so data is ordered correctly.
- *    I might need to reverse some axes as well.
- * 2) use header data to improve translations and to tag things with correct metadata
+ * 1) permute axes (and reverse dims?) as specified in a header variable so data is ordered correctly.
+ * 2) use header data to improve translations and to tag things with more metadata
  * 3) support float 128 bit ieee types when zorbage provides them
  * 4) figure out how to support old Analyze files when detected
  * 5) support published extensions if they makes sense for translation
@@ -798,13 +797,15 @@ public class Nifti {
 			throw new IllegalArgumentException("Unknown data type passed to merge() method");
 	}
 
-	private static Tuple2<Allocatable, DimensionedDataSource> scale(DimensionedDataSource<?> data, Allocatable type, double slope, double intercept) {
+	private static Tuple2<Allocatable, DimensionedDataSource>
+		scale(DimensionedDataSource data, Allocatable type, double slope, double intercept)
+	{
 		Tuple2<Allocatable, DimensionedDataSource> retVal = new Tuple2<Allocatable, DimensionedDataSource>(null, null);
 		long[] dims = new long[data.numDimensions()];
 		for (int i = 0; i < dims.length; i++) {
 			dims[i] = data.dimension(i);
 		}
-		DimensionedDataSource<?> returnDs;
+		DimensionedDataSource returnDs;
 		if (type instanceof UnsignedInt1Member) {
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
 			Procedure2<UnsignedInt1Member,Float64Member> proc = new Procedure2<UnsignedInt1Member,Float64Member>() {
@@ -1080,10 +1081,7 @@ public class Nifti {
 			}
 		}
 		
-		// TODO: decode the 16 bytes here as a IEEE 128 bit float and then convert that value as a BigDecimal.
-		//   One gotcha: can't represent NaNs this way.
-		
-		return BigDecimal.ZERO;
+		return decodeFloat128(buffer);
 	}
 	
 	private static short swapShort(short in) {
@@ -1110,5 +1108,14 @@ public class Nifti {
 		long b6 = (in >> 48) & 0xff;
 		long b7 = (in >> 56) & 0xff;
 		return (b0 << 56) | (b1 << 48) | (b2 << 40) | (b3 << 32) | (b4 << 24) | (b5 << 16) | (b6 << 8) | (b7 << 0);
+	}
+	
+	private static BigDecimal decodeFloat128(byte[] buffer) {
+		// TODO: decode the 16 bytes here as a IEEE 128 bit float and then convert that value as a BigDecimal.
+		//   One gotcha: can't represent NaNs or infinities this way.
+
+		// maybe I will treat infinities as MAX or MIN and NaNs and subnormals as 0.
+		
+		return BigDecimal.ZERO;
 	}
  }
