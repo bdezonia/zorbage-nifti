@@ -49,6 +49,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Arrays;
 
+import nom.bdezonia.zorbage.algebra.Algebra;
 import nom.bdezonia.zorbage.algebra.Allocatable;
 import nom.bdezonia.zorbage.algebra.G;
 import nom.bdezonia.zorbage.algorithm.GridIterator;
@@ -804,13 +805,14 @@ public class Nifti {
 	private static Tuple2<Allocatable, DimensionedDataSource>
 		scale(DimensionedDataSource data, Allocatable type, double slope, double intercept)
 	{
-		Tuple2<Allocatable, DimensionedDataSource> retVal = new Tuple2<Allocatable, DimensionedDataSource>(null, null);
 		long[] dims = new long[data.numDimensions()];
 		for (int i = 0; i < dims.length; i++) {
 			dims[i] = data.dimension(i);
 		}
+		Algebra returnAlg;
 		DimensionedDataSource returnDs;
 		if (type instanceof UnsignedInt1Member) {
+			returnAlg = G.DBL;
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
 			Procedure2<UnsignedInt1Member,Float64Member> proc = new Procedure2<UnsignedInt1Member,Float64Member>() {
 				@Override
@@ -819,10 +821,9 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.UINT1, G.DBL, proc, (IndexedDataSource<UnsignedInt1Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
-			retVal.setA(G.DBL.construct());
-			retVal.setB(returnDs);
 		}
 		else if (type instanceof UnsignedInt8Member) {
+			returnAlg = G.DBL;
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
 			Procedure2<UnsignedInt8Member,Float64Member> proc = new Procedure2<UnsignedInt8Member,Float64Member>() {
 				@Override
@@ -831,10 +832,9 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.UINT8, G.DBL, proc, (IndexedDataSource<UnsignedInt8Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
-			retVal.setA(G.DBL.construct());
-			retVal.setB(returnDs);
 		}
 		else if (type instanceof SignedInt8Member) {
+			returnAlg = G.DBL;
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
 			Procedure2<SignedInt8Member,Float64Member> proc = new Procedure2<SignedInt8Member,Float64Member>() {
 				@Override
@@ -843,10 +843,9 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.INT8, G.DBL, proc, (IndexedDataSource<SignedInt8Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
-			retVal.setA(G.DBL.construct());
-			retVal.setB(returnDs);
 		}
 		else if (type instanceof UnsignedInt16Member) {
+			returnAlg = G.DBL;
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
 			Procedure2<UnsignedInt16Member,Float64Member> proc = new Procedure2<UnsignedInt16Member,Float64Member>() {
 				@Override
@@ -855,10 +854,9 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.UINT16, G.DBL, proc, (IndexedDataSource<UnsignedInt16Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
-			retVal.setA(G.DBL.construct());
-			retVal.setB(returnDs);
 		}
 		else if (type instanceof SignedInt16Member) {
+			returnAlg = G.DBL;
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
 			Procedure2<SignedInt16Member,Float64Member> proc = new Procedure2<SignedInt16Member,Float64Member>() {
 				@Override
@@ -867,10 +865,9 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.INT16, G.DBL, proc, (IndexedDataSource<SignedInt16Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
-			retVal.setA(G.DBL.construct());
-			retVal.setB(returnDs);
 		}
 		else if (type instanceof UnsignedInt32Member) {
+			returnAlg = G.DBL;
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
 			Procedure2<UnsignedInt32Member,Float64Member> proc = new Procedure2<UnsignedInt32Member,Float64Member>() {
 				@Override
@@ -879,10 +876,9 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.UINT32, G.DBL, proc, (IndexedDataSource<UnsignedInt32Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
-			retVal.setA(G.DBL.construct());
-			retVal.setB(returnDs);
 		}
 		else if (type instanceof SignedInt32Member) {
+			returnAlg = G.DBL;
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
 			Procedure2<SignedInt32Member,Float64Member> proc = new Procedure2<SignedInt32Member,Float64Member>() {
 				@Override
@@ -891,10 +887,9 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.INT32, G.DBL, proc, (IndexedDataSource<SignedInt32Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
-			retVal.setA(G.DBL.construct());
-			retVal.setB(returnDs);
 		}
 		else if (type instanceof UnsignedInt64Member) {
+			returnAlg = G.HP;
 			returnDs = DimensionedStorage.allocate(G.HP.construct(), dims);
 			Procedure2<UnsignedInt64Member,HighPrecisionMember> proc = new Procedure2<UnsignedInt64Member,HighPrecisionMember>() {
 				@Override
@@ -904,10 +899,9 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.UINT64, G.HP, proc, (IndexedDataSource<UnsignedInt64Member>) data.rawData(), (IndexedDataSource<HighPrecisionMember>) returnDs.rawData());
-			retVal.setA(G.HP.construct());
-			retVal.setB(returnDs);
 		}
 		else if (type instanceof SignedInt64Member) {
+			returnAlg = G.HP;
 			returnDs = DimensionedStorage.allocate(G.HP.construct(), dims);
 			Procedure2<SignedInt64Member,HighPrecisionMember> proc = new Procedure2<SignedInt64Member,HighPrecisionMember>() {
 				@Override
@@ -917,10 +911,9 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.INT64, G.HP, proc, (IndexedDataSource<SignedInt64Member>) data.rawData(), (IndexedDataSource<HighPrecisionMember>) returnDs.rawData());
-			retVal.setA(G.HP.construct());
-			retVal.setB(returnDs);
 		}
 		else if (type instanceof Float32Member) {
+			returnAlg = G.DBL;
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
 			Procedure2<Float32Member,Float64Member> proc = new Procedure2<Float32Member,Float64Member>() {
 				@Override
@@ -929,10 +922,9 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.FLT, G.DBL, proc, (IndexedDataSource<Float32Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
-			retVal.setA(G.DBL.construct());
-			retVal.setB(returnDs);
 		}
 		else if (type instanceof ComplexFloat32Member) {
+			returnAlg = G.CDBL;
 			returnDs = DimensionedStorage.allocate(G.CDBL.construct(), dims);
 			Procedure2<ComplexFloat32Member,ComplexFloat64Member> proc = new Procedure2<ComplexFloat32Member,ComplexFloat64Member>() {
 				@Override
@@ -942,10 +934,9 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.CFLT, G.CDBL, proc, (IndexedDataSource<ComplexFloat32Member>) data.rawData(), (IndexedDataSource<ComplexFloat64Member>) returnDs.rawData());
-			retVal.setA(G.CDBL.construct());
-			retVal.setB(returnDs);
 		}
 		else if (type instanceof Float64Member) {
+			returnAlg = G.DBL;
 			returnDs = data;
 			Procedure2<Float64Member,Float64Member> proc = new Procedure2<Float64Member,Float64Member>() {
 				@Override
@@ -954,10 +945,9 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.DBL, G.DBL, proc, (IndexedDataSource<Float64Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
-			retVal.setA(G.DBL.construct());
-			retVal.setB(returnDs);
 		}
 		else if (type instanceof ComplexFloat64Member) {
+			returnAlg = G.CDBL;
 			returnDs = data;
 			Procedure2<ComplexFloat64Member,ComplexFloat64Member> proc = new Procedure2<ComplexFloat64Member,ComplexFloat64Member>() {
 				@Override
@@ -967,10 +957,9 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.CDBL, G.CDBL, proc, (IndexedDataSource<ComplexFloat64Member>) data.rawData(), (IndexedDataSource<ComplexFloat64Member>) returnDs.rawData());
-			retVal.setA(G.CDBL.construct());
-			retVal.setB(returnDs);
 		}
 		else if (type instanceof HighPrecisionMember) {
+			returnAlg = G.HP;
 			returnDs = data;
 			Procedure2<HighPrecisionMember,HighPrecisionMember> proc = new Procedure2<HighPrecisionMember,HighPrecisionMember>() {
 				@Override
@@ -980,10 +969,9 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.HP, G.HP, proc, (IndexedDataSource<HighPrecisionMember>) data.rawData(), (IndexedDataSource<HighPrecisionMember>) returnDs.rawData());
-			retVal.setA(G.HP.construct());
-			retVal.setB(returnDs);
 		}
 		else if (type instanceof ComplexHighPrecisionMember) {
+			returnAlg = G.CHP;
 			returnDs = data;
 			Procedure2<ComplexHighPrecisionMember,ComplexHighPrecisionMember> proc = new Procedure2<ComplexHighPrecisionMember,ComplexHighPrecisionMember>() {
 				@Override
@@ -995,22 +983,20 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.CHP, G.CHP, proc, (IndexedDataSource<ComplexHighPrecisionMember>) data.rawData(), (IndexedDataSource<ComplexHighPrecisionMember>) returnDs.rawData());
-			retVal.setA(G.CHP.construct());
-			retVal.setB(returnDs);
 		}
 		else if (type instanceof RgbMember) {
 			// do not scale color data
-			retVal.setA(G.RGB.construct());
-			retVal.setB(data);
+			returnAlg = G.RGB;
+			returnDs = data;
 		}
 		else if (type instanceof ArgbMember) {
 			// do not scale color data
-			retVal.setA(G.ARGB.construct());
-			retVal.setB(data);
+			returnAlg = G.ARGB;
+			returnDs = data;
 		}
 		else
 			throw new IllegalArgumentException("Unknown data type! passed to scale() method");
-		return retVal;
+		return new Tuple2(returnAlg.construct(), returnDs);
 	}
 	
 	private static byte readByte(DataInputStream str) throws IOException {
