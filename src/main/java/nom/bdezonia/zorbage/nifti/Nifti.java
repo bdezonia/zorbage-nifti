@@ -60,6 +60,7 @@ import nom.bdezonia.zorbage.misc.DataBundle;
 import nom.bdezonia.zorbage.procedure.Procedure2;
 import nom.bdezonia.zorbage.sampling.IntegerIndex;
 import nom.bdezonia.zorbage.sampling.SamplingIterator;
+import nom.bdezonia.zorbage.tuple.Tuple2;
 import nom.bdezonia.zorbage.type.color.ArgbMember;
 import nom.bdezonia.zorbage.type.color.RgbMember;
 import nom.bdezonia.zorbage.type.complex.float32.ComplexFloat32Member;
@@ -486,9 +487,14 @@ public class Nifti {
 
 			DimensionedDataSource data;
 			
+			Allocatable type;
+
+			Tuple2<Allocatable,DimensionedDataSource> result;
+			
 			// NIFTI bit data requires a little different approach
 			if (data_type == 1) {
 				UnsignedInt1Member pix = G.UINT1.construct();
+				type = pix;
 				data = DimensionedStorage.allocate(pix, dims);
 				IntegerIndex idx = new IntegerIndex(data.numDimensions());
 				SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
@@ -503,13 +509,15 @@ public class Nifti {
 					pix.setV(val);
 					data.set(idx, pix);
 				}
-				if (scl_slope != 1 || scl_inter != 0) {
-					data = scale(data, pix, scl_slope, scl_inter);
+				if (scl_slope != 0) {
+					result = scale(data, pix, scl_slope, scl_inter);
+					type = result.a();
+					data = result.b();
 				}
 			}
 			else {
 				// all other types are straightforward
-				Allocatable type = value(data_type);
+				type = value(data_type);
 				data = DimensionedStorage.allocate(type, dims);
 				IntegerIndex idx = new IntegerIndex(data.numDimensions());
 				SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
@@ -518,8 +526,10 @@ public class Nifti {
 					readValue(d, type, data_type, swapBytes, buf128);
 					data.set(idx, type);
 				}
-				if (scl_slope != 1 || scl_inter != 0) {
-					data = scale(data, type, scl_slope, scl_inter);
+				if (scl_slope != 0) {
+					result = scale(data, type, scl_slope, scl_inter);
+					type = result.a();
+					data = result.b();
 				}
 			}
 
@@ -573,7 +583,7 @@ public class Nifti {
 			
 			DataBundle bundle = new DataBundle();
 			
-			mergeData(bundle, data_type, data);
+			mergeData(bundle, type, data);
 
 			d.close();
 			
@@ -732,70 +742,69 @@ public class Nifti {
 
 	}
 	
-	private static void mergeData(DataBundle bundle, short data_type, DimensionedDataSource data) {
-		switch (data_type) {
-		case 1: // bit
-			bundle.mergeUInt1(data);  // bit types passing through this routine is okay
-			break;
-		case 2: // uint8
-			bundle.mergeUInt8(data);
-			break;
-		case 4: // int16
-			bundle.mergeInt16(data);
-			break;
-		case 8: // int32
-			bundle.mergeInt32(data);
-			break;
-		case 16: // float32
-			bundle.mergeFlt32(data);
-			break;
-		case 32: // cfloat32
-			bundle.mergeComplexFlt32(data);
-			break;
-		case 64: // float64
-			bundle.mergeFlt64(data);
-			break;
-		case 128: // rgb
-			bundle.mergeRgb(data);
-			break;
-		case 256: // int8
-			bundle.mergeInt8(data);
-			break;
-		case 512: // uint16
-			bundle.mergeUInt16(data);
-			break;
-		case 768: // uint32
-			bundle.mergeUInt32(data);
-			break;
-		case 1024: // int64
-			bundle.mergeInt64(data);
-			break;
-		case 1280: // uint64
-			bundle.mergeUInt64(data);
-			break;
-		case 1536: // float128 : treat as highprec
-			bundle.mergeHP(data);
-			break;
-		case 1792: // cfloat64
-			bundle.mergeComplexFlt64(data);
-			break;
-		case 2048: // cfloat128 : treat as highprec
-			bundle.mergeComplexHP(data);
-			break;
-		case 2304: // rgba
-			bundle.mergeArgb(data);
-			break;
-		default:
-			throw new IllegalArgumentException("Unknown data type! "+data_type);
+	private static void mergeData(DataBundle bundle, Allocatable type, DimensionedDataSource data) {
+		if (type instanceof UnsignedInt1Member) {
+			bundle.mergeUInt1(data);
 		}
+		else if (type instanceof UnsignedInt8Member) {
+			bundle.mergeUInt8(data);
+		}
+		else if (type instanceof SignedInt8Member) {
+			bundle.mergeInt8(data);
+		}
+		else if (type instanceof UnsignedInt16Member) {
+			bundle.mergeUInt16(data);
+		}
+		else if (type instanceof SignedInt16Member) {
+			bundle.mergeInt16(data);
+		}
+		else if (type instanceof UnsignedInt32Member) {
+			bundle.mergeUInt32(data);
+		}
+		else if (type instanceof SignedInt32Member) {
+			bundle.mergeInt32(data);
+		}
+		else if (type instanceof UnsignedInt64Member) {
+			bundle.mergeUInt64(data);
+		}
+		else if (type instanceof SignedInt64Member) {
+			bundle.mergeInt64(data);
+		}
+		else if (type instanceof Float32Member) {
+			bundle.mergeFlt32(data);
+		}
+		else if (type instanceof ComplexFloat32Member) {
+			bundle.mergeComplexFlt32(data);
+		}
+		else if (type instanceof Float64Member) {
+			bundle.mergeFlt64(data);
+		}
+		else if (type instanceof ComplexFloat64Member) {
+			bundle.mergeComplexFlt64(data);
+		}
+		else if (type instanceof HighPrecisionMember) {
+			bundle.mergeHP(data);
+		}
+		else if (type instanceof ComplexHighPrecisionMember) {
+			bundle.mergeComplexHP(data);
+		}
+		else if (type instanceof RgbMember) {
+			bundle.mergeRgb(data);
+		}
+		else if (type instanceof ArgbMember) {
+			bundle.mergeArgb(data);
+		}
+		else
+			throw new IllegalArgumentException("Unknown data type passed to merge() method");
 	}
 
-	private static DimensionedDataSource<?> scale(DimensionedDataSource<?> data, Allocatable type, double slope, double intercept) {
-		DimensionedDataSource<?> returnDs = null;
+	private static Tuple2<Allocatable, DimensionedDataSource> scale(DimensionedDataSource<?> data, Allocatable type, double slope, double intercept) {
+		Tuple2<Allocatable, DimensionedDataSource> retVal = new Tuple2<Allocatable, DimensionedDataSource>(null, null);
 		long[] dims = new long[data.numDimensions()];
 		for (int i = 0; i < dims.length; i++) {
 			dims[i] = data.dimension(i);
 		}
+		DimensionedDataSource<?> returnDs;
 		if (type instanceof UnsignedInt1Member) {
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
 			Procedure2<UnsignedInt1Member,Float64Member> proc = new Procedure2<UnsignedInt1Member,Float64Member>() {
@@ -805,6 +814,8 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.UINT1, G.DBL, proc, (IndexedDataSource<UnsignedInt1Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+			retVal.setA(G.DBL.construct());
+			retVal.setB(returnDs);
 		}
 		else if (type instanceof UnsignedInt8Member) {
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
@@ -815,6 +826,8 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.UINT8, G.DBL, proc, (IndexedDataSource<UnsignedInt8Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+			retVal.setA(G.DBL.construct());
+			retVal.setB(returnDs);
 		}
 		else if (type instanceof SignedInt8Member) {
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
@@ -825,6 +838,8 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.INT8, G.DBL, proc, (IndexedDataSource<SignedInt8Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+			retVal.setA(G.DBL.construct());
+			retVal.setB(returnDs);
 		}
 		else if (type instanceof UnsignedInt16Member) {
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
@@ -835,6 +850,8 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.UINT16, G.DBL, proc, (IndexedDataSource<UnsignedInt16Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+			retVal.setA(G.DBL.construct());
+			retVal.setB(returnDs);
 		}
 		else if (type instanceof SignedInt16Member) {
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
@@ -845,6 +862,8 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.INT16, G.DBL, proc, (IndexedDataSource<SignedInt16Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+			retVal.setA(G.DBL.construct());
+			retVal.setB(returnDs);
 		}
 		else if (type instanceof UnsignedInt32Member) {
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
@@ -855,6 +874,8 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.UINT32, G.DBL, proc, (IndexedDataSource<UnsignedInt32Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+			retVal.setA(G.DBL.construct());
+			retVal.setB(returnDs);
 		}
 		else if (type instanceof SignedInt32Member) {
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
@@ -865,6 +886,8 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.INT32, G.DBL, proc, (IndexedDataSource<SignedInt32Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+			retVal.setA(G.DBL.construct());
+			retVal.setB(returnDs);
 		}
 		else if (type instanceof UnsignedInt64Member) {
 			returnDs = DimensionedStorage.allocate(G.HP.construct(), dims);
@@ -876,6 +899,8 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.UINT64, G.HP, proc, (IndexedDataSource<UnsignedInt64Member>) data.rawData(), (IndexedDataSource<HighPrecisionMember>) returnDs.rawData());
+			retVal.setA(G.HP.construct());
+			retVal.setB(returnDs);
 		}
 		else if (type instanceof SignedInt64Member) {
 			returnDs = DimensionedStorage.allocate(G.HP.construct(), dims);
@@ -887,6 +912,8 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.INT64, G.HP, proc, (IndexedDataSource<SignedInt64Member>) data.rawData(), (IndexedDataSource<HighPrecisionMember>) returnDs.rawData());
+			retVal.setA(G.HP.construct());
+			retVal.setB(returnDs);
 		}
 		else if (type instanceof Float32Member) {
 			returnDs = DimensionedStorage.allocate(G.DBL.construct(), dims);
@@ -897,6 +924,8 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.FLT, G.DBL, proc, (IndexedDataSource<Float32Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+			retVal.setA(G.DBL.construct());
+			retVal.setB(returnDs);
 		}
 		else if (type instanceof ComplexFloat32Member) {
 			returnDs = DimensionedStorage.allocate(G.CDBL.construct(), dims);
@@ -908,6 +937,8 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.CFLT, G.CDBL, proc, (IndexedDataSource<ComplexFloat32Member>) data.rawData(), (IndexedDataSource<ComplexFloat64Member>) returnDs.rawData());
+			retVal.setA(G.CDBL.construct());
+			retVal.setB(returnDs);
 		}
 		else if (type instanceof Float64Member) {
 			returnDs = data;
@@ -918,6 +949,8 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.DBL, G.DBL, proc, (IndexedDataSource<Float64Member>) data.rawData(), (IndexedDataSource<Float64Member>) returnDs.rawData());
+			retVal.setA(G.DBL.construct());
+			retVal.setB(returnDs);
 		}
 		else if (type instanceof ComplexFloat64Member) {
 			returnDs = data;
@@ -929,6 +962,8 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.CDBL, G.CDBL, proc, (IndexedDataSource<ComplexFloat64Member>) data.rawData(), (IndexedDataSource<ComplexFloat64Member>) returnDs.rawData());
+			retVal.setA(G.CDBL.construct());
+			retVal.setB(returnDs);
 		}
 		else if (type instanceof HighPrecisionMember) {
 			returnDs = data;
@@ -940,6 +975,8 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.HP, G.HP, proc, (IndexedDataSource<HighPrecisionMember>) data.rawData(), (IndexedDataSource<HighPrecisionMember>) returnDs.rawData());
+			retVal.setA(G.HP.construct());
+			retVal.setB(returnDs);
 		}
 		else if (type instanceof ComplexHighPrecisionMember) {
 			returnDs = data;
@@ -953,18 +990,22 @@ public class Nifti {
 				}
 			};
 			Transform2.compute(G.CHP, G.CHP, proc, (IndexedDataSource<ComplexHighPrecisionMember>) data.rawData(), (IndexedDataSource<ComplexHighPrecisionMember>) returnDs.rawData());
+			retVal.setA(G.CHP.construct());
+			retVal.setB(returnDs);
 		}
 		else if (type instanceof RgbMember) {
 			// do not scale color data
-			returnDs = data;
+			retVal.setA(G.RGB.construct());
+			retVal.setB(data);
 		}
 		else if (type instanceof ArgbMember) {
 			// do not scale color data
-			returnDs = data;
+			retVal.setA(G.ARGB.construct());
+			retVal.setB(data);
 		}
 		else
 			throw new IllegalArgumentException("Unknown data type! passed to scale() method");
-		return returnDs;
+		return retVal;
 	}
 	
 	private static byte readByte(DataInputStream str) throws IOException {
