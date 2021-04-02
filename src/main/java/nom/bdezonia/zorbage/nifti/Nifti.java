@@ -1008,7 +1008,7 @@ public class Nifti {
 	}
 
 	private static String readString(DataInputStream d, int maxChars) throws IOException {
-		String str = "";
+		StringBuilder str = new StringBuilder();
 		boolean done = false;
 		for (int i = 0; i < maxChars; i++) {
 			char ch = (char) readByte(d);
@@ -1016,10 +1016,10 @@ public class Nifti {
 				done = true;
 			}
 			if (!done) {
-				str += ch;
+				str.append(ch);
 			}
 		}
-		return str;
+		return str.toString();
 	}
 	
 	private static BigDecimal readFloat128(DataInputStream str, boolean swapBytes, byte[] buffer) throws IOException {
