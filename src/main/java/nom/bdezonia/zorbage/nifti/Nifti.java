@@ -1108,11 +1108,11 @@ public class Nifti {
 		//   One gotcha: can't represent NaNs or infinities this way.
 		//   Maybe I will treat infinities as MAX or MIN and NaNs as 0.
 		
-		BigInteger sign = BigInteger.ZERO;
+		int sign = 0;
 		int exponent = 0;
 		BigInteger fraction = BigInteger.ZERO;
 		
-		sign = BigInteger.valueOf(buffer[15] & 0x80).shiftRight(7);
+		sign = (buffer[15] & 0x80);
 		
 		exponent = ((buffer[15] & 0x7f) << 8) + (buffer[14] & 0xff);
 		
@@ -1133,7 +1133,7 @@ public class Nifti {
 			}
 			BigDecimal scale = two.pow(exponent - 16383);
 			value = value.multiply(scale);
-			if (sign.compareTo(BigInteger.ZERO) != 0) {
+			if (sign != 0) {
 				return value.negate();
 			}
 			else {
@@ -1142,7 +1142,7 @@ public class Nifti {
 		}
 		else if (exponent == 0) {
 			if (fraction.compareTo(BigInteger.ZERO) == 0) {
-				if (sign.compareTo(BigInteger.ZERO) != 0) {
+				if (sign != 0) {
 					return BigDecimal.valueOf(-0.0);
 				}
 				else {
@@ -1162,7 +1162,7 @@ public class Nifti {
 				}
 				BigDecimal scale = two.pow(-16382);
 				value = value.multiply(scale);
-				if (sign.compareTo(BigInteger.ZERO) != 0) {
+				if (sign != 0) {
 					return value.negate();
 				}
 				else {
@@ -1176,11 +1176,12 @@ public class Nifti {
 				// an infinity : replace with min or max
 				// TODO not the best decision but good enough for now
 				//   max = 2^16383 × (2 − 2^−112)
+				//   min = -max
 				BigDecimal two = BigDecimal.valueOf(2);
 				BigDecimal value = two.pow(16383);
 				BigDecimal frac = two.subtract(two.pow(-112));
 				value = value.multiply(frac);
-				if (sign.compareTo(BigInteger.ZERO) != 0) {
+				if (sign != 0) {
 					return value.negate();
 				}
 				else {
