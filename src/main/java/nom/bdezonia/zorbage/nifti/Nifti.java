@@ -32,14 +32,14 @@ import java.io.BufferedInputStream;
  * TODO
  * 1) permute axes (and reverse dims?) as specified in a header variable so data is ordered correctly.
  * 2) use header data to improve translations and to tag things with more metadata
- * 3) support float 128 bit ieee types (especiialy with nans and infinities) when zorbage provides them
- * 4) figure out how to support old Analyze files when detected
- * 5) support published extensions if they makes sense for translation
- * 6) support data intents from the intent codes in the header
- * 7) see this page for lots of good info: https://brainder.org/2012/09/23/the-nifti-file-format/
- * 8) the 1-bit bool type is hinted at. I haven't found a lot of docs about it yet. do the bytes
+ * 3) support float 128 bit ieee types (especially with nans and infinities) when zorbage provides them
+ * 4) support published extensions if they makes sense for translation
+ * 5) support data intents from the intent codes in the header
+ * 6) the 1-bit bool type is hinted at. I haven't found a lot of docs about it yet. do the bytes
  *      always only have unused space in the column direction? Also does endianness in any way affect
  *      the bit order to scan first (hi vs lo).
+ * 7) test ieee 128 bit decodings, 1-bit files, ANALYZE files, am I reading rgb argb components in the right order?
+ * 8) gather ANALYZE and NIFTI1 and NIFTI2 .h files and PDFs and web pages and put in this repo
  */
 
 import java.io.DataInputStream;
@@ -218,12 +218,12 @@ public class Nifti {
 				
 				int v;
 				units = new String[(int)numD];
-				String space_units = "";
+				String space_units = "unknown";
 				v = xyzt_units & 0x7;
 				if (v == 1) space_units = "meter";
 				if (v == 2) space_units = "mm";
 				if (v == 3) space_units = "micron";
-				String time_units = "";
+				String time_units = "unknown";
 				v = xyzt_units & 0x38;
 				if (v == 6) time_units = "secs";
 				if (v == 16) time_units = "millisecs";
@@ -232,7 +232,7 @@ public class Nifti {
 				if (v == 32) time_units = "hertz";
 				if (v == 40) time_units = "ppm";
 				if (v == 48) time_units = "rad/sec";
-				String other_units = "";
+				String other_units = "unknown";
 
 				if (numD > 0) units[0] = space_units;
 				if (numD > 1) units[1] = space_units;
@@ -293,7 +293,7 @@ public class Nifti {
 				else if (magic0 == 'n' && magic1 == '+' && magic2 == '1' && magic3 == 0)
 					System.out.println("VALID and of type 1b");
 				else
-					System.out.println("INVALID type 1 header");
+					System.out.println("INVALID type 1 header : it's ANALYZE data");
 			}
 			else if (headerSize == 540 || swapInt(headerSize) == 540) {
 				
@@ -425,12 +425,12 @@ public class Nifti {
 
 				int v;
 				units = new String[(int)numD];
-				String space_units = "";
+				String space_units = "unknown";
 				v = xyzt_units & 0x7;
 				if (v == 1) space_units = "meter";
 				if (v == 2) space_units = "mm";
 				if (v == 3) space_units = "micron";
-				String time_units = "";
+				String time_units = "unknown";
 				v = xyzt_units & 0x38;
 				if (v == 6) time_units = "secs";
 				if (v == 16) time_units = "millisecs";
@@ -438,7 +438,7 @@ public class Nifti {
 				if (v == 32) time_units = "hertz";
 				if (v == 40) time_units = "ppm";
 				if (v == 48) time_units = "rad/sec";
-				String other_units = "";
+				String other_units = "unknown";
 
 				if (numD > 0) units[0] = space_units;
 				if (numD > 1) units[1] = space_units;
@@ -462,7 +462,6 @@ public class Nifti {
 			else {
 				
 				System.out.println("unknown header size  "+headerSize);
-				System.out.println("  maybe this is an old style ANALYZE data file");
 				
 				d.close();
 				
@@ -565,17 +564,17 @@ public class Nifti {
 				data.setAxisEquation(3, new StringDefinedAxisEquation("" + toffset + " + " + spacings[3] + " * $0"));
 			}
 			if (numD > 4) {
-				data.setAxisType(4, "");
+				data.setAxisType(4, "u");
 				data.setAxisUnit(4, units[4]);
 				data.setAxisEquation(4, new StringDefinedAxisEquation("" + spacings[4] + " * $0"));
 			}
 			if (numD > 5) {
-				data.setAxisType(5, "");
+				data.setAxisType(5, "v");
 				data.setAxisUnit(5, units[5]);
 				data.setAxisEquation(5, new StringDefinedAxisEquation("" + spacings[5] + " * $0"));
 			}
 			if (numD > 6) {
-				data.setAxisType(6, "");
+				data.setAxisType(6, "w");
 				data.setAxisUnit(6, units[6]);
 				data.setAxisEquation(6, new StringDefinedAxisEquation("" + spacings[6] + " * $0"));
 			}
@@ -1068,7 +1067,7 @@ public class Nifti {
 			for (int i = 0; i < 8; i++) {
 				byte tmp = buffer[i];
 				buffer[i] = buffer[15 - i];
-				buffer[15-i] = tmp;
+				buffer[15 - i] = tmp;
 			}
 		}
 		
