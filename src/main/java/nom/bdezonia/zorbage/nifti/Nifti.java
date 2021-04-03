@@ -32,7 +32,7 @@ import java.io.BufferedInputStream;
  * TODO
  * 1) permute axes (and reverse dims?) as specified in a header variable so data is ordered correctly.
  * 2) use header data to improve translations and to tag things with more metadata
- * 3) support float 128 bit ieee types when zorbage provides them
+ * 3) support float 128 bit ieee types (especiialy with nans and infinities) when zorbage provides them
  * 4) figure out how to support old Analyze files when detected
  * 5) support published extensions if they makes sense for translation
  * 6) support data intents from the intent codes in the header
@@ -47,6 +47,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Arrays;
 
 import nom.bdezonia.zorbage.algebra.Algebra;
@@ -1100,12 +1101,97 @@ public class Nifti {
 		return (b0 << 56) | (b1 << 48) | (b2 << 40) | (b3 << 32) | (b4 << 24) | (b5 << 16) | (b6 << 8) | (b7 << 0);
 	}
 	
+	// https://en.wikipedia.org/wiki/Quadruple-precision_floating-point_format
+	
 	private static BigDecimal decodeFloat128(byte[] buffer) {
-		// TODO: decode the 16 bytes here as a IEEE 128 bit float and then convert that value as a BigDecimal.
+		// Decode the 16 bytes here as a IEEE 128 bit float and then convert that value into a BigDecimal.
 		//   One gotcha: can't represent NaNs or infinities this way.
-
-		// maybe I will treat infinities as MAX or MIN and NaNs and subnormals as 0.
+		//   Maybe I will treat infinities as MAX or MIN and NaNs as 0.
 		
-		return BigDecimal.ZERO;
+		BigInteger sign = BigInteger.ZERO;
+		int exponent = 0;
+		BigInteger fraction = BigInteger.ZERO;
+		
+		sign = BigInteger.valueOf(buffer[15] & 0x80).shiftRight(7);
+		
+		exponent = ((buffer[15] & 0x7f) << 8) + (buffer[14] & 0xff);
+		
+		for (int i = 13; i <= 0; i--) {
+			fraction = fraction.shiftLeft(8).add(BigInteger.valueOf(buffer[i] & 0xff));
+		}
+
+		if ((exponent > 0) && (exponent < 0x7fff)) {
+			// a regular number
+			//   (−1)signbit × 2exponentbits2 − 16383 × 1.significandbits2
+			BigDecimal two = BigDecimal.valueOf(2);
+			BigDecimal value = BigDecimal.ONE;
+			BigDecimal inc = BigDecimal.valueOf(0.5);
+			for (int i = 111; i >= 0; i--) {
+				if (fraction.testBit(i))
+					value.add(inc);
+				inc = inc.divide(two);
+			}
+			BigDecimal scale = two.pow(exponent - 16383);
+			value = value.multiply(scale);
+			if (sign.compareTo(BigInteger.ZERO) != 0) {
+				return value.negate();
+			}
+			else {
+				return value;
+			}
+		}
+		else if (exponent == 0) {
+			if (fraction.compareTo(BigInteger.ZERO) == 0) {
+				if (sign.compareTo(BigInteger.ZERO) != 0) {
+					return BigDecimal.valueOf(-0.0);
+				}
+				else {
+					return BigDecimal.valueOf(0.0);
+				}
+			}
+			else { // fraction does not equal zero
+				// subnormal number
+				//   (−1)signbit × 2−16382 × 0.significandbits2
+				BigDecimal two = BigDecimal.valueOf(2);
+				BigDecimal value = BigDecimal.ZERO;
+				BigDecimal inc = BigDecimal.valueOf(0.5);
+				for (int i = 111; i >= 0; i--) {
+					if (fraction.testBit(i))
+						value.add(inc);
+					inc = inc.divide(two);
+				}
+				BigDecimal scale = two.pow(-16382);
+				value = value.multiply(scale);
+				if (sign.compareTo(BigInteger.ZERO) != 0) {
+					return value.negate();
+				}
+				else {
+					return value;
+				}
+			}
+		}
+		else {
+			// exponent == 0x7fff
+			if (fraction.compareTo(BigInteger.ZERO) == 0) {
+				// an infinity : replace with min or max
+				// TODO not the best decision but good enough for now
+				//   max = 2^16383 × (2 − 2^−112)
+				BigDecimal two = BigDecimal.valueOf(2);
+				BigDecimal value = two.pow(16383);
+				BigDecimal frac = two.subtract(two.pow(-112));
+				value = value.multiply(frac);
+				if (sign.compareTo(BigInteger.ZERO) != 0) {
+					return value.negate();
+				}
+				else {
+					return value;
+				}
+			}
+			else { // fraction does not equal zero
+				// a nan : replace with 0
+				// TODO not the best decision but good enough for now
+				return BigDecimal.ZERO;
+			}
+		}
 	}
  }
