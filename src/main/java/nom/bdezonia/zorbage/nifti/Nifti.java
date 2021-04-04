@@ -38,7 +38,6 @@ import java.io.BufferedInputStream;
  *      always only have unused space in the column direction? Also does endianness in any way affect
  *      the bit order to scan first (hi vs lo).
  * 6) test ieee 128 bit decodings, 1-bit files, ANALYZE files, am I reading rgb argb components in the right order?
- * 7) gather ANALYZE and NIFTI1 and NIFTI2 .h files and PDFs and web pages and put in this repo
  */
 
 import java.io.DataInputStream;

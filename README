@@ -24,8 +24,11 @@ How to include zorbage-nifti in a different build system
 
 All about nifti 1
   https://nifti.nimh.nih.gov/nifti-1/
+  https://brainder.org/2012/09/23/the-nifti-file-format/
 
 All about nifti 2
   https://nifti.nimh.nih.gov/nifti-2/
+  https://brainder.org/2015/04/03/the-nifti-2-file-format/
+
 
 Note that zorbage-nifti does not (yet) read old style ANALYZE files
