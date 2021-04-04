@@ -13,22 +13,21 @@ How to include zorbage-nifti in your Maven project
   <dependency>
     <groupId>io.github.bdezonia</groupId>
     <artifactId>zorbage-nifti</artifactId>
-    <version>0.0.5.1</version>
+    <version>0.0.6</version>
   </dependency>
   
 How to include zorbage-nifti in a different build system
 
-  See https://search.maven.org/artifact/io.github.bdezonia/zorbage-nifti/0.0.5.1/jar
+  See https://search.maven.org/artifact/io.github.bdezonia/zorbage-nifti/0.0.6/jar
   for instructions on how to reference zorbage-nifti in build systems such as
   Gradle or others.
 
-All about nifti 1
+All about the nifti 1 file format
   https://nifti.nimh.nih.gov/nifti-1/
   https://brainder.org/2012/09/23/the-nifti-file-format/
 
-All about nifti 2
+All about the nifti 2 file format
   https://nifti.nimh.nih.gov/nifti-2/
   https://brainder.org/2015/04/03/the-nifti-2-file-format/
 
-
-Note that zorbage-nifti does not (yet) read old style ANALYZE files
+Note that zorbage-nifti can also read pre-nifti ANALYZE files
