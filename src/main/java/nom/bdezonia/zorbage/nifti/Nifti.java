@@ -104,10 +104,12 @@ public class Nifti {
 		
 		DataInputStream d = null;
 		
+		BufferedInputStream bf = null;
+				
 		try {
 			in = new FileInputStream(file);
 			
-			BufferedInputStream bf = new BufferedInputStream(in);
+			bf = new BufferedInputStream(in);
 			
 			d = new DataInputStream(bf);
 
@@ -293,7 +295,8 @@ public class Nifti {
 				else if (magic0 == 'n' && magic1 == '+' && magic2 == '1' && magic3 == 0)
 					System.out.println("VALID and of type 1b");
 				else
-					System.out.println("INVALID type 1 header : it's ANALYZE data");
+					System.out.println("INVALID type 1 header : treat it as ANALYZE data");
+					// TODO: read header as an ANALYZE 7.5 file and then read pixels correctly
 			}
 			else if (headerSize == 540 || swapInt(headerSize) == 540) {
 				
@@ -452,7 +455,7 @@ public class Nifti {
 				
 				intent = readString(d, 16);
 
-				byte dimInfo = readByte(d);
+				byte dim_info = readByte(d);
 				
 				for (int i = 0; i < 15; i++) {
 					// unused stuff
@@ -487,14 +490,14 @@ public class Nifti {
 				}
 			} while (ext0 != 0);
 			
-			System.out.println("dims = " + Arrays.toString(dims));
-
 			DimensionedDataSource data;
 			
 			Allocatable type;
 
 			Tuple2<Allocatable,DimensionedDataSource> result;
-			
+
+			System.out.println("dims = " + Arrays.toString(dims));
+
 			// NIFTI bit data requires a little different approach
 			if (data_type == 1) {
 				UnsignedInt1Member pix = G.UINT1.construct();
@@ -505,6 +508,10 @@ public class Nifti {
 				byte bucket = 0;
 				while (itr.hasNext()) {
 					itr.next(idx);
+					long saved1 = idx.get(1);
+					//long saved2 = idx.get(2);
+					idx.set(1, dims[1] - saved1 - 1);
+					//idx.set(2, dims[2] - saved2 - 1);
 					int bitNum = (int) (idx.get(0) % 8); 
 					if (bitNum == 0) {
 						bucket = readByte(d);
@@ -512,6 +519,8 @@ public class Nifti {
 					int val = (bucket & (1 << bitNum)) > 0 ? 1 : 0;
 					pix.setV(val);
 					data.set(idx, pix);
+					idx.set(1, saved1);
+					//idx.set(2, saved2);
 				}
 				if (scl_slope != 0) {
 					result = scale(data, pix, scl_slope, scl_inter);
@@ -527,8 +536,14 @@ public class Nifti {
 				SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
 				while (itr.hasNext()) {
 					itr.next(idx);
+					long saved1 = idx.get(1);
+					//long saved2 = idx.get(2);
+					idx.set(1, dims[1] - saved1 - 1);
+					//idx.set(2, dims[2] - saved2 - 1);
 					readValue(d, type, data_type, swapBytes, buf128);
 					data.set(idx, type);
+					idx.set(1, saved1);
+					//idx.set(2, saved2);
 				}
 				if (scl_slope != 0) {
 					result = scale(data, type, scl_slope, scl_inter);
@@ -543,37 +558,37 @@ public class Nifti {
 			
 			data.setSource(filename);
 			
-			if (numD > 0) {
+			if (data.numDimensions() > 0) {
 				data.setAxisType(0, "x");
 				data.setAxisUnit(0, units[0]);
 				data.setAxisEquation(0, new StringDefinedAxisEquation("" + spacings[0] + " * $0"));
 			}
-			if (numD > 1) {
+			if (data.numDimensions() > 1) {
 				data.setAxisType(1, "y");
 				data.setAxisUnit(1, units[1]);
 				data.setAxisEquation(1, new StringDefinedAxisEquation("" + spacings[1] + " * $0"));
 			}
-			if (numD > 2) {
+			if (data.numDimensions() > 2) {
 				data.setAxisType(2, "z");
 				data.setAxisUnit(2, units[2]);
 				data.setAxisEquation(2, new StringDefinedAxisEquation("" + spacings[2] + " * $0"));
 			}
-			if (numD > 3) {
+			if (data.numDimensions() > 3) {
 				data.setAxisType(3, "t");
 				data.setAxisUnit(3, units[3]);
 				data.setAxisEquation(3, new StringDefinedAxisEquation("" + toffset + " + " + spacings[3] + " * $0"));
 			}
-			if (numD > 4) {
+			if (data.numDimensions() > 4) {
 				data.setAxisType(4, "u");
 				data.setAxisUnit(4, units[4]);
 				data.setAxisEquation(4, new StringDefinedAxisEquation("" + spacings[4] + " * $0"));
 			}
-			if (numD > 5) {
+			if (data.numDimensions() > 5) {
 				data.setAxisType(5, "v");
 				data.setAxisUnit(5, units[5]);
 				data.setAxisEquation(5, new StringDefinedAxisEquation("" + spacings[5] + " * $0"));
 			}
-			if (numD > 6) {
+			if (data.numDimensions() > 6) {
 				data.setAxisType(6, "w");
 				data.setAxisUnit(6, units[6]);
 				data.setAxisEquation(6, new StringDefinedAxisEquation("" + spacings[6] + " * $0"));
@@ -598,6 +613,8 @@ public class Nifti {
 			try {
 				if (d != null)
 					d.close();
+				else if (bf != null)
+					bf.close();
 				else if (in != null)
 					in.close();
 			} catch (IOException x) {
@@ -1194,4 +1211,5 @@ public class Nifti {
 			}
 		}
 	}
+	
  }
