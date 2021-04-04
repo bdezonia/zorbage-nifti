@@ -86,6 +86,7 @@ import nom.bdezonia.zorbage.type.real.highprec.HighPrecisionMember;
  * @author Barry DeZonia
  *
  */
+@SuppressWarnings({"rawtypes", "unused","unchecked"})
 public class Nifti {
 	
 	/**
@@ -114,7 +115,7 @@ public class Nifti {
 
 			long numD;
 			
-			long[] dims = null;
+			long[] dims;
 			
 			short data_type = 0;
 			
@@ -536,7 +537,7 @@ public class Nifti {
 					int val = (bucket & (1 << bitNum)) > 0 ? 1 : 0;
 					pix.setV(val);
 					data.set(idx, pix);
-					if (sx < 0) {
+					if ((!is_analyze && sx < 0) || (is_analyze && sx > 0)) {
 						idx.set(0, saved0);
 					}
 					if (sy > 0) {
@@ -575,7 +576,7 @@ public class Nifti {
 					}
 					readValue(d, type, data_type, swapBytes, buf128);
 					data.set(idx, type);
-					if (sx < 0) {
+					if ((!is_analyze && sx < 0) || (is_analyze && sx > 0)) {
 						idx.set(0, saved0);
 					}
 					if (sy > 0) {
