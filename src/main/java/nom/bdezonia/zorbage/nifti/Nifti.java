@@ -30,16 +30,15 @@ import java.io.BufferedInputStream;
 
 /*
  * TODO
- * 1) permute axes (and reverse dims?) as specified in a header variable so data is ordered correctly.
- * 2) use header data to improve translations and to tag things with more metadata
- * 3) support float 128 bit ieee types (especially with nans and infinities) when zorbage provides them
- * 4) support published extensions if they makes sense for translation
- * 5) support data intents from the intent codes in the header
- * 6) the 1-bit bool type is hinted at. I haven't found a lot of docs about it yet. do the bytes
+ * 1) use header data to improve translations and to tag things with more metadata
+ * 2) support float 128 bit ieee types (especially with nans and infinities) when zorbage provides them
+ * 3) support published extensions if they makes sense for translation
+ * 4) support data intents from the intent codes in the header
+ * 5) the 1-bit bool type is hinted at. I haven't found a lot of docs about it yet. do the bytes
  *      always only have unused space in the column direction? Also does endianness in any way affect
  *      the bit order to scan first (hi vs lo).
- * 7) test ieee 128 bit decodings, 1-bit files, ANALYZE files, am I reading rgb argb components in the right order?
- * 8) gather ANALYZE and NIFTI1 and NIFTI2 .h files and PDFs and web pages and put in this repo
+ * 6) test ieee 128 bit decodings, 1-bit files, ANALYZE files, am I reading rgb argb components in the right order?
+ * 7) gather ANALYZE and NIFTI1 and NIFTI2 .h files and PDFs and web pages and put in this repo
  */
 
 import java.io.DataInputStream;
@@ -142,6 +141,8 @@ public class Nifti {
 			double sx = 0;
 			double sy = 0;
 			double sz = 0;
+			
+			boolean is_analyze = false;
 			
 			int headerSize = d.readInt();
 			
@@ -298,9 +299,12 @@ public class Nifti {
 					System.out.println("VALID and of type 1a");
 				else if (magic0 == 'n' && magic1 == '+' && magic2 == '1' && magic3 == 0)
 					System.out.println("VALID and of type 1b");
-				else
+				else {
 					System.out.println("INVALID type 1 header : treat it as ANALYZE data");
 					// TODO: read header as an ANALYZE 7.5 file and then read pixels correctly
+					// For now expect the current header vars will work for us as is.
+					is_analyze = true;
+				}
 			}
 			else if (headerSize == 540 || swapInt(headerSize) == 540) {
 				
@@ -515,7 +519,8 @@ public class Nifti {
 					long saved0 = idx.get(0);
 					long saved1 = idx.get(1);
 					long saved2 = idx.get(2);
-					if (sx < 0) {
+					// orient the axis data correctly
+					if ((!is_analyze && sx < 0) || (is_analyze && sx > 0)) {
 						idx.set(0, dims[0] - saved0 - 1);
 					}
 					if (sy > 0) {
@@ -558,7 +563,8 @@ public class Nifti {
 					long saved0 = idx.get(0);
 					long saved1 = idx.get(1);
 					long saved2 = idx.get(2);
-					if (sx < 0) {
+					// orient the axis data correctly
+					if ((!is_analyze && sx < 0) || (is_analyze && sx > 0)) {
 						idx.set(0, dims[0] - saved0 - 1);
 					}
 					if (sy > 0) {
