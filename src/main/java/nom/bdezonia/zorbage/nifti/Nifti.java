@@ -30,14 +30,12 @@ import java.io.BufferedInputStream;
 
 /*
  * TODO
- * 1) use header data to improve translations and to tag things with more metadata
- * 2) support float 128 bit ieee types (especially with nans and infinities) when zorbage provides them
- * 3) support published extensions if they makes sense for translation
- * 4) support data intents from the intent codes in the header
- * 5) the 1-bit bool type is hinted at. I haven't found a lot of docs about it yet. do the bytes
+ * 1) support float 128 bit ieee types (especially with nans and infinities) when zorbage provides them
+ * 2) support published extensions if they makes sense for translation
+ * 3) the 1-bit bool type is hinted at. I haven't found a lot of docs about it yet. do the bytes
  *      always only have unused space in the column direction? Also does endianness in any way affect
  *      the bit order to scan first (hi vs lo).
- * 6) test ieee 128 bit decodings, 1-bit files, ANALYZE files, am I reading rgb argb components in the right order?
+ * 4) test ieee 128 bit decodings, 1-bit files, ANALYZE files, am I reading rgb argb components in the right order?
  */
 
 import java.io.DataInputStream;
@@ -140,11 +138,19 @@ public class Nifti {
 			
 			double toffset;
 			
-			String intent;
-			
 			String auxname;
 			
 			String description;
+			
+			String intent;
+			
+			Integer nifti_intent_code;
+
+			Double nifti_intent_param1;
+			
+			Double nifti_intent_param2;
+			
+			Double nifti_intent_param3;
 			
 			double sx = 0;
 			double sy = 0;
@@ -190,11 +196,11 @@ public class Nifti {
 				if (numD > 5) dims[5] = d6;
 				if (numD > 6) dims[6] = d7;
 				
-				float intent_p1 = readFloat(hdr, swapBytes);
-				float intent_p2 = readFloat(hdr, swapBytes);
-				float intent_p3 = readFloat(hdr, swapBytes);
+				nifti_intent_param1 = (double) readFloat(hdr, swapBytes);
+				nifti_intent_param2 = (double) readFloat(hdr, swapBytes);
+				nifti_intent_param3 = (double) readFloat(hdr, swapBytes);
 				
-				short nifti_intent_code = readShort(hdr, swapBytes);
+				nifti_intent_code = (int) readShort(hdr, swapBytes);
 				data_type = readShort(hdr, swapBytes);
 				short bitpix = readShort(hdr, swapBytes);
 				short slice_start = readShort(hdr, swapBytes);
@@ -385,9 +391,9 @@ public class Nifti {
 				
 				System.out.println("data type: "+data_type+" bitpix "+bitpix);
 				
-				double intent_p1 = readDouble(hdr, swapBytes);
-				double intent_p2 = readDouble(hdr, swapBytes);
-				double intent_p3 = readDouble(hdr, swapBytes);
+				nifti_intent_param1 = readDouble(hdr, swapBytes);
+				nifti_intent_param2 = readDouble(hdr, swapBytes);
+				nifti_intent_param3 = readDouble(hdr, swapBytes);
 				
 				// pixel spacings
 				
@@ -481,7 +487,7 @@ public class Nifti {
 				if (numD > 5) units[5] = other_units;
 				if (numD > 6) units[6] = other_units;
 
-				int nifti_intent_code = readInt(hdr, swapBytes);
+				nifti_intent_code = readInt(hdr, swapBytes);
 				
 				intent = readString(hdr, 16);
 
@@ -682,6 +688,14 @@ public class Nifti {
 			data.metadata().put("description", description);
 			
 			data.metadata().put("intent", intent);
+			
+			data.metadata().put("nifti intent code", nifti_intent_code.toString());
+			
+			data.metadata().put("nifti intent parameter 1", nifti_intent_param1.toString());
+			
+			data.metadata().put("nifti intent parameter 2", nifti_intent_param2.toString());
+			
+			data.metadata().put("nifti intent parameter 3", nifti_intent_param3.toString());
 			
 			DataBundle bundle = new DataBundle();
 			
