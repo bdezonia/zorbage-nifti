@@ -139,6 +139,10 @@ public class Nifti {
 			
 			String description;
 			
+			double sx = 0;
+			double sy = 0;
+			double sz = 0;
+			
 			int headerSize = d.readInt();
 			
 			if (headerSize == 348 || swapInt(headerSize) == 348) {
@@ -270,17 +274,17 @@ public class Nifti {
 
 				// affine transform : row 0 = x, row 1 = y, row 2 = z
 				
-				float x0 = readFloat(d, swapBytes);
+				sx = readFloat(d, swapBytes);
 				float x1 = readFloat(d, swapBytes);
 				float x2 = readFloat(d, swapBytes);
 				float x3 = readFloat(d, swapBytes);
 				float y0 = readFloat(d, swapBytes);
-				float y1 = readFloat(d, swapBytes);
+				sy = readFloat(d, swapBytes);
 				float y2 = readFloat(d, swapBytes);
 				float y3 = readFloat(d, swapBytes);
 				float z0 = readFloat(d, swapBytes);
 				float z1 = readFloat(d, swapBytes);
-				float z2 = readFloat(d, swapBytes);
+				sz = readFloat(d, swapBytes);
 				float z3 = readFloat(d, swapBytes);
 
 				intent = readString(d, 16);
@@ -409,17 +413,17 @@ public class Nifti {
 
 				// affine transform : row 0 = x, row 1 = y, row 2 = z
 				
-				double x0 = readDouble(d, swapBytes);
+				sx = readDouble(d, swapBytes);
 				double x1 = readDouble(d, swapBytes);
 				double x2 = readDouble(d, swapBytes);
 				double x3 = readDouble(d, swapBytes);
 				double y0 = readDouble(d, swapBytes);
-				double y1 = readDouble(d, swapBytes);
+				sy = readDouble(d, swapBytes);
 				double y2 = readDouble(d, swapBytes);
 				double y3 = readDouble(d, swapBytes);
 				double z0 = readDouble(d, swapBytes);
 				double z1 = readDouble(d, swapBytes);
-				double z2 = readDouble(d, swapBytes);
+				sz = readDouble(d, swapBytes);
 				double z3 = readDouble(d, swapBytes);
 
 				int slice_code = readInt(d, swapBytes);
@@ -508,10 +512,18 @@ public class Nifti {
 				byte bucket = 0;
 				while (itr.hasNext()) {
 					itr.next(idx);
+					long saved0 = idx.get(0);
 					long saved1 = idx.get(1);
-					//long saved2 = idx.get(2);
-					idx.set(1, dims[1] - saved1 - 1);
-					//idx.set(2, dims[2] - saved2 - 1);
+					long saved2 = idx.get(2);
+					if (sx < 0) {
+						idx.set(0, dims[0] - saved0 - 1);
+					}
+					if (sy > 0) {
+						idx.set(1, dims[1] - saved1 - 1);
+					}
+					if (sz < 0) {
+						idx.set(2, dims[2] - saved2 - 1);
+					}
 					int bitNum = (int) (idx.get(0) % 8); 
 					if (bitNum == 0) {
 						bucket = readByte(d);
@@ -519,8 +531,15 @@ public class Nifti {
 					int val = (bucket & (1 << bitNum)) > 0 ? 1 : 0;
 					pix.setV(val);
 					data.set(idx, pix);
-					idx.set(1, saved1);
-					//idx.set(2, saved2);
+					if (sx < 0) {
+						idx.set(0, saved0);
+					}
+					if (sy > 0) {
+						idx.set(1, saved1);
+					}
+					if (sz < 0) {
+						idx.set(2, saved2);
+					}
 				}
 				if (scl_slope != 0) {
 					result = scale(data, pix, scl_slope, scl_inter);
@@ -536,14 +555,29 @@ public class Nifti {
 				SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
 				while (itr.hasNext()) {
 					itr.next(idx);
+					long saved0 = idx.get(0);
 					long saved1 = idx.get(1);
-					//long saved2 = idx.get(2);
-					idx.set(1, dims[1] - saved1 - 1);
-					//idx.set(2, dims[2] - saved2 - 1);
+					long saved2 = idx.get(2);
+					if (sx < 0) {
+						idx.set(0, dims[0] - saved0 - 1);
+					}
+					if (sy > 0) {
+						idx.set(1, dims[1] - saved1 - 1);
+					}
+					if (sz < 0) {
+						idx.set(2, dims[2] - saved2 - 1);
+					}
 					readValue(d, type, data_type, swapBytes, buf128);
 					data.set(idx, type);
-					idx.set(1, saved1);
-					//idx.set(2, saved2);
+					if (sx < 0) {
+						idx.set(0, saved0);
+					}
+					if (sy > 0) {
+						idx.set(1, saved1);
+					}
+					if (sz < 0) {
+						idx.set(2, saved2);
+					}
 				}
 				if (scl_slope != 0) {
 					result = scale(data, type, scl_slope, scl_inter);
