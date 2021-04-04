@@ -95,23 +95,31 @@ public class Nifti {
 	 */
 	public static DataBundle open(String filename) {
 				
-		File file = new File(filename);
+		File file1 = new File(filename);
 
-		System.out.println("File length = "+file.length());
+		System.out.println("File length = "+file1.length());
 		
-		FileInputStream in = null;
+		FileInputStream f1 = null;
 		
-		DataInputStream d = null;
+		FileInputStream f2 = null;
 		
-		BufferedInputStream bf = null;
+		BufferedInputStream bf1 = null;
+
+		BufferedInputStream bf2 = null;
+
+		DataInputStream hdr = null;
+		
+		DataInputStream values = null;
 				
 		try {
-			in = new FileInputStream(file);
+			f1 = new FileInputStream(file1);
 			
-			bf = new BufferedInputStream(in);
+			bf1 = new BufferedInputStream(f1);
 			
-			d = new DataInputStream(bf);
+			hdr = new DataInputStream(bf1);
 
+			boolean two_files;
+			
 			long numD;
 			
 			long[] dims;
@@ -144,7 +152,7 @@ public class Nifti {
 			
 			boolean is_analyze = false;
 			
-			int headerSize = d.readInt();
+			int headerSize = hdr.readInt();
 			
 			if (headerSize == 348 || swapInt(headerSize) == 348) {
 				
@@ -153,25 +161,25 @@ public class Nifti {
 				System.out.println("Possibly NIFTI 1");
 
 				for (int i = 0; i < 35; i++) {
-					readByte(d);
+					readByte(hdr);
 				}
 				
-				byte dim_info = readByte(d);
+				byte dim_info = readByte(hdr);
 
 				// pixel dimensions
 				
-				numD = readShort(d, false);
+				numD = readShort(hdr, false);
 				if (numD < 0 || numD > 7) {
 					numD = swapShort((short)numD);
 					swapBytes = true;
 				}
-				short d1 = readShort(d, swapBytes);
-				short d2 = readShort(d, swapBytes);
-				short d3 = readShort(d, swapBytes);
-				short d4 = readShort(d, swapBytes);
-				short d5 = readShort(d, swapBytes);
-				short d6 = readShort(d, swapBytes);
-				short d7 = readShort(d, swapBytes);
+				short d1 = readShort(hdr, swapBytes);
+				short d2 = readShort(hdr, swapBytes);
+				short d3 = readShort(hdr, swapBytes);
+				short d4 = readShort(hdr, swapBytes);
+				short d5 = readShort(hdr, swapBytes);
+				short d6 = readShort(hdr, swapBytes);
+				short d7 = readShort(hdr, swapBytes);
 				
 				dims = new long[(int)numD];
 				if (numD > 0) dims[0] = d1;
@@ -182,27 +190,27 @@ public class Nifti {
 				if (numD > 5) dims[5] = d6;
 				if (numD > 6) dims[6] = d7;
 				
-				float intent_p1 = readFloat(d, swapBytes);
-				float intent_p2 = readFloat(d, swapBytes);
-				float intent_p3 = readFloat(d, swapBytes);
+				float intent_p1 = readFloat(hdr, swapBytes);
+				float intent_p2 = readFloat(hdr, swapBytes);
+				float intent_p3 = readFloat(hdr, swapBytes);
 				
-				short nifti_intent_code = readShort(d, swapBytes);
-				data_type = readShort(d, swapBytes);
-				short bitpix = readShort(d, swapBytes);
-				short slice_start = readShort(d, swapBytes);
+				short nifti_intent_code = readShort(hdr, swapBytes);
+				data_type = readShort(hdr, swapBytes);
+				short bitpix = readShort(hdr, swapBytes);
+				short slice_start = readShort(hdr, swapBytes);
 				
 				System.out.println("data type: "+data_type+" bitpix "+bitpix);
 				
 				// pixel spacings
 				
-				float sd0 = readFloat(d, swapBytes);
-				float sd1 = readFloat(d, swapBytes);
-				float sd2 = readFloat(d, swapBytes);
-				float sd3 = readFloat(d, swapBytes);
-				float sd4 = readFloat(d, swapBytes);
-				float sd5 = readFloat(d, swapBytes);
-				float sd6 = readFloat(d, swapBytes);
-				float sd7 = readFloat(d, swapBytes);
+				float sd0 = readFloat(hdr, swapBytes);
+				float sd1 = readFloat(hdr, swapBytes);
+				float sd2 = readFloat(hdr, swapBytes);
+				float sd3 = readFloat(hdr, swapBytes);
+				float sd4 = readFloat(hdr, swapBytes);
+				float sd5 = readFloat(hdr, swapBytes);
+				float sd6 = readFloat(hdr, swapBytes);
+				float sd7 = readFloat(hdr, swapBytes);
 
 				spacings = new double[(int)numD];
 				if (numD > 0) spacings[0] = sd1;
@@ -213,15 +221,15 @@ public class Nifti {
 				if (numD > 5) spacings[5] = sd6;
 				if (numD > 6) spacings[6] = sd7;
 				
-				float vox_offset = readFloat(d, swapBytes);
+				float vox_offset = readFloat(hdr, swapBytes);
 				
-				scl_slope = readFloat(d, swapBytes);
-				scl_inter = readFloat(d, swapBytes);
+				scl_slope = readFloat(hdr, swapBytes);
+				scl_inter = readFloat(hdr, swapBytes);
 
-				short slice_end = readShort(d, swapBytes);
-				byte slice_code = readByte(d);
+				short slice_end = readShort(hdr, swapBytes);
+				byte slice_code = readByte(hdr);
 				
-				byte xyzt_units = readByte(d);
+				byte xyzt_units = readByte(hdr);
 				
 				int v;
 				units = new String[(int)numD];
@@ -249,61 +257,66 @@ public class Nifti {
 				if (numD > 5) units[5] = other_units;
 				if (numD > 6) units[6] = other_units;
 
-				float cal_max = readFloat(d, swapBytes);
-				float cal_min = readFloat(d, swapBytes);
+				float cal_max = readFloat(hdr, swapBytes);
+				float cal_min = readFloat(hdr, swapBytes);
 				
-				float slice_duration = readFloat(d, swapBytes);
-				toffset = readFloat(d, swapBytes);
+				float slice_duration = readFloat(hdr, swapBytes);
+				toffset = readFloat(hdr, swapBytes);
 
 				for (int i = 0; i < 2; i++) {
-					readInt(d, swapBytes);
+					readInt(hdr, swapBytes);
 				}
 
-				description = readString(d, 80);
+				description = readString(hdr, 80);
 
-				auxname = readString(d, 24);
+				auxname = readString(hdr, 24);
 
-				short qform_code = readShort(d, swapBytes);
-				short sform_code = readShort(d, swapBytes);
+				short qform_code = readShort(hdr, swapBytes);
+				short sform_code = readShort(hdr, swapBytes);
 
-				float quatern_b = readFloat(d, swapBytes);
-				float quatern_c = readFloat(d, swapBytes);
-				float quatern_d = readFloat(d, swapBytes);
-				float qoffset_x = readFloat(d, swapBytes);
-				float qoffset_y = readFloat(d, swapBytes);
-				float qoffset_z = readFloat(d, swapBytes);
+				float quatern_b = readFloat(hdr, swapBytes);
+				float quatern_c = readFloat(hdr, swapBytes);
+				float quatern_d = readFloat(hdr, swapBytes);
+				float qoffset_x = readFloat(hdr, swapBytes);
+				float qoffset_y = readFloat(hdr, swapBytes);
+				float qoffset_z = readFloat(hdr, swapBytes);
 
 				// affine transform : row 0 = x, row 1 = y, row 2 = z
 				
-				sx = readFloat(d, swapBytes);
-				float x1 = readFloat(d, swapBytes);
-				float x2 = readFloat(d, swapBytes);
-				float x3 = readFloat(d, swapBytes);
-				float y0 = readFloat(d, swapBytes);
-				sy = readFloat(d, swapBytes);
-				float y2 = readFloat(d, swapBytes);
-				float y3 = readFloat(d, swapBytes);
-				float z0 = readFloat(d, swapBytes);
-				float z1 = readFloat(d, swapBytes);
-				sz = readFloat(d, swapBytes);
-				float z3 = readFloat(d, swapBytes);
+				sx = readFloat(hdr, swapBytes);
+				float x1 = readFloat(hdr, swapBytes);
+				float x2 = readFloat(hdr, swapBytes);
+				float x3 = readFloat(hdr, swapBytes);
+				float y0 = readFloat(hdr, swapBytes);
+				sy = readFloat(hdr, swapBytes);
+				float y2 = readFloat(hdr, swapBytes);
+				float y3 = readFloat(hdr, swapBytes);
+				float z0 = readFloat(hdr, swapBytes);
+				float z1 = readFloat(hdr, swapBytes);
+				sz = readFloat(hdr, swapBytes);
+				float z3 = readFloat(hdr, swapBytes);
 
-				intent = readString(d, 16);
+				intent = readString(hdr, 16);
 
-				byte magic0 = readByte(d);
-				byte magic1 = readByte(d);
-				byte magic2 = readByte(d);
-				byte magic3 = readByte(d);
+				byte magic0 = readByte(hdr);
+				byte magic1 = readByte(hdr);
+				byte magic2 = readByte(hdr);
+				byte magic3 = readByte(hdr);
 
-				if (magic0 == 'n' && magic1 == 'i' && magic2 == '1' && magic3 == 0)
+				if (magic0 == 'n' && magic1 == 'i' && magic2 == '1' && magic3 == 0) {
 					System.out.println("VALID and of type 1a");
-				else if (magic0 == 'n' && magic1 == '+' && magic2 == '1' && magic3 == 0)
+					two_files = true;
+				}
+				else if (magic0 == 'n' && magic1 == '+' && magic2 == '1' && magic3 == 0) {
+					two_files = false;
 					System.out.println("VALID and of type 1b");
+				}
 				else {
 					System.out.println("INVALID type 1 header : treat it as ANALYZE data");
 					// TODO: read header as an ANALYZE 7.5 file and then read pixels correctly
 					// For now expect the current header vars will work for us as is.
 					is_analyze = true;
+					two_files = true;
 				}
 			}
 			else if (headerSize == 540 || swapInt(headerSize) == 540) {
@@ -312,39 +325,48 @@ public class Nifti {
 				
 				System.out.println("Possibly NIFTI 2");
 
-				byte magic0 = readByte(d);
-				byte magic1 = readByte(d);
-				byte magic2 = readByte(d);
-				byte magic3 = readByte(d);
-				byte magic4 = readByte(d);
-				byte magic5 = readByte(d);
-				byte magic6 = readByte(d);
-				byte magic7 = readByte(d);
+				byte magic0 = readByte(hdr);
+				byte magic1 = readByte(hdr);
+				byte magic2 = readByte(hdr);
+				byte magic3 = readByte(hdr);
+				byte magic4 = readByte(hdr);
+				byte magic5 = readByte(hdr);
+				byte magic6 = readByte(hdr);
+				byte magic7 = readByte(hdr);
 
-				if (magic0 == 'n' && magic1 == 'i' && magic2 == '2' && magic3 == 0)
+				if (magic0 == 'n' && magic1 == 'i' && magic2 == '2' && magic3 == 0) {
 					System.out.println("VALID and of type 2a");
-				else if (magic0 == 'n' && magic1 == '+' && magic2 == '2' && magic3 == 0)
+					two_files = true;
+				}
+				else if (magic0 == 'n' && magic1 == '+' && magic2 == '2' && magic3 == 0) {
 					System.out.println("VALID and of type 2b");
-				else
+					two_files = false;
+				}
+				else {
 					System.out.println("INVALID type 2 header");
+					
+					hdr.close();
+					
+					return new DataBundle();
+				}
 
-				data_type = readShort(d, false);
-				short bitpix = readShort(d, false);
+				data_type = readShort(hdr, false);
+				short bitpix = readShort(hdr, false);
 				
 				// pixel dimensions
 				
-				numD = readLong(d, false);
+				numD = readLong(hdr, false);
 				if (numD < 0 || numD > 7) {
 					numD = swapLong(numD);
 					swapBytes = true;
 				}
-				long d1 = readLong(d, swapBytes);
-				long d2 = readLong(d, swapBytes);
-				long d3 = readLong(d, swapBytes);
-				long d4 = readLong(d, swapBytes);
-				long d5 = readLong(d, swapBytes);
-				long d6 = readLong(d, swapBytes);
-				long d7 = readLong(d, swapBytes);
+				long d1 = readLong(hdr, swapBytes);
+				long d2 = readLong(hdr, swapBytes);
+				long d3 = readLong(hdr, swapBytes);
+				long d4 = readLong(hdr, swapBytes);
+				long d5 = readLong(hdr, swapBytes);
+				long d6 = readLong(hdr, swapBytes);
+				long d7 = readLong(hdr, swapBytes);
 				
 				dims = new long[(int)numD];
 				if (numD > 0) dims[0] = d1;
@@ -363,20 +385,20 @@ public class Nifti {
 				
 				System.out.println("data type: "+data_type+" bitpix "+bitpix);
 				
-				double intent_p1 = readDouble(d, swapBytes);
-				double intent_p2 = readDouble(d, swapBytes);
-				double intent_p3 = readDouble(d, swapBytes);
+				double intent_p1 = readDouble(hdr, swapBytes);
+				double intent_p2 = readDouble(hdr, swapBytes);
+				double intent_p3 = readDouble(hdr, swapBytes);
 				
 				// pixel spacings
 				
-				double sd0 = readDouble(d, swapBytes);
-				double sd1 = readDouble(d, swapBytes);
-				double sd2 = readDouble(d, swapBytes);
-				double sd3 = readDouble(d, swapBytes);
-				double sd4 = readDouble(d, swapBytes);
-				double sd5 = readDouble(d, swapBytes);
-				double sd6 = readDouble(d, swapBytes);
-				double sd7 = readDouble(d, swapBytes);
+				double sd0 = readDouble(hdr, swapBytes);
+				double sd1 = readDouble(hdr, swapBytes);
+				double sd2 = readDouble(hdr, swapBytes);
+				double sd3 = readDouble(hdr, swapBytes);
+				double sd4 = readDouble(hdr, swapBytes);
+				double sd5 = readDouble(hdr, swapBytes);
+				double sd6 = readDouble(hdr, swapBytes);
+				double sd7 = readDouble(hdr, swapBytes);
 
 				spacings = new double[(int)numD];
 				if (numD > 0) spacings[0] = sd1;
@@ -387,52 +409,52 @@ public class Nifti {
 				if (numD > 5) spacings[5] = sd6;
 				if (numD > 6) spacings[6] = sd7;
 				
-				long vox_offset = readLong(d, swapBytes);
+				long vox_offset = readLong(hdr, swapBytes);
 				
-				scl_slope = readDouble(d, swapBytes);
-				scl_inter = readDouble(d, swapBytes);
+				scl_slope = readDouble(hdr, swapBytes);
+				scl_inter = readDouble(hdr, swapBytes);
 				
-				double cal_max = readDouble(d, swapBytes);
-				double cal_min = readDouble(d, swapBytes);
+				double cal_max = readDouble(hdr, swapBytes);
+				double cal_min = readDouble(hdr, swapBytes);
 				
-				double slice_duration = readDouble(d, swapBytes);
-				toffset = readDouble(d, swapBytes);
+				double slice_duration = readDouble(hdr, swapBytes);
+				toffset = readDouble(hdr, swapBytes);
 
-				long slice_start = readLong(d, swapBytes);
-				long slice_end = readLong(d, swapBytes);
+				long slice_start = readLong(hdr, swapBytes);
+				long slice_end = readLong(hdr, swapBytes);
 
-				description = readString(d, 80);
+				description = readString(hdr, 80);
 
-				auxname = readString(d, 24);
+				auxname = readString(hdr, 24);
 
-				int qform_code = readInt(d, swapBytes);
-				int sform_code = readInt(d, swapBytes);
+				int qform_code = readInt(hdr, swapBytes);
+				int sform_code = readInt(hdr, swapBytes);
 
-				double quatern_b = readDouble(d, swapBytes);
-				double quatern_c = readDouble(d, swapBytes);
-				double quatern_d = readDouble(d, swapBytes);
-				double qoffset_x = readDouble(d, swapBytes);
-				double qoffset_y = readDouble(d, swapBytes);
-				double qoffset_z = readDouble(d, swapBytes);
+				double quatern_b = readDouble(hdr, swapBytes);
+				double quatern_c = readDouble(hdr, swapBytes);
+				double quatern_d = readDouble(hdr, swapBytes);
+				double qoffset_x = readDouble(hdr, swapBytes);
+				double qoffset_y = readDouble(hdr, swapBytes);
+				double qoffset_z = readDouble(hdr, swapBytes);
 
 				// affine transform : row 0 = x, row 1 = y, row 2 = z
 				
-				sx = readDouble(d, swapBytes);
-				double x1 = readDouble(d, swapBytes);
-				double x2 = readDouble(d, swapBytes);
-				double x3 = readDouble(d, swapBytes);
-				double y0 = readDouble(d, swapBytes);
-				sy = readDouble(d, swapBytes);
-				double y2 = readDouble(d, swapBytes);
-				double y3 = readDouble(d, swapBytes);
-				double z0 = readDouble(d, swapBytes);
-				double z1 = readDouble(d, swapBytes);
-				sz = readDouble(d, swapBytes);
-				double z3 = readDouble(d, swapBytes);
+				sx = readDouble(hdr, swapBytes);
+				double x1 = readDouble(hdr, swapBytes);
+				double x2 = readDouble(hdr, swapBytes);
+				double x3 = readDouble(hdr, swapBytes);
+				double y0 = readDouble(hdr, swapBytes);
+				sy = readDouble(hdr, swapBytes);
+				double y2 = readDouble(hdr, swapBytes);
+				double y3 = readDouble(hdr, swapBytes);
+				double z0 = readDouble(hdr, swapBytes);
+				double z1 = readDouble(hdr, swapBytes);
+				sz = readDouble(hdr, swapBytes);
+				double z3 = readDouble(hdr, swapBytes);
 
-				int slice_code = readInt(d, swapBytes);
+				int slice_code = readInt(hdr, swapBytes);
 				
-				int xyzt_units = readInt(d, swapBytes);
+				int xyzt_units = readInt(hdr, swapBytes);
 
 				int v;
 				units = new String[(int)numD];
@@ -459,22 +481,22 @@ public class Nifti {
 				if (numD > 5) units[5] = other_units;
 				if (numD > 6) units[6] = other_units;
 
-				int nifti_intent_code = readInt(d, swapBytes);
+				int nifti_intent_code = readInt(hdr, swapBytes);
 				
-				intent = readString(d, 16);
+				intent = readString(hdr, 16);
 
-				byte dim_info = readByte(d);
+				byte dim_info = readByte(hdr);
 				
 				for (int i = 0; i < 15; i++) {
 					// unused stuff
-					readByte(d);
+					readByte(hdr);
 				}
 			}
 			else {
 				
 				System.out.println("unknown header size  "+headerSize);
 				
-				d.close();
+				hdr.close();
 				
 				return new DataBundle();
 			}
@@ -482,22 +504,41 @@ public class Nifti {
 			byte ext0, ext1, ext2, ext3;
 			do {
 				// I'm assuming after every extension there is another extension sentinel. docs are not clear. hopefully this works.
-				ext0 = readByte(d);
-				ext1 = readByte(d);
-				ext2 = readByte(d);
-				ext3 = readByte(d);
+				ext0 = readByte(hdr);
+				ext1 = readByte(hdr);
+				ext2 = readByte(hdr);
+				ext3 = readByte(hdr);
 				
 				if (ext0 != 0) {
 					// an extension is present. for now just skip past it.
-					int esize = readInt(d, swapBytes);
-					int ecode = readInt(d, swapBytes);
+					int esize = readInt(hdr, swapBytes);
+					int ecode = readInt(hdr, swapBytes);
 					for (int i = 0; i < esize - 8; i++) {
-						readByte(d);
+						readByte(hdr);
 					}
 					System.out.println("Extension found (and skipped) with code "+ecode);
 				}
 			} while (ext0 != 0);
-			
+
+			if (two_files) {
+				
+				File file2 = new File(filename.substring(0, filename.length()-4)+ ".img");
+
+				f2 = new FileInputStream(file2);
+				
+				bf2 = new BufferedInputStream(f2);
+				
+				values = new DataInputStream(bf2);
+			}
+			else {
+				
+				f2 = f1;
+				
+				bf2 = bf1;
+				
+				values = hdr;
+			}
+
 			DimensionedDataSource data;
 			
 			Allocatable type;
@@ -531,7 +572,7 @@ public class Nifti {
 					}
 					int bitNum = (int) (idx.get(0) % 8); 
 					if (bitNum == 0) {
-						bucket = readByte(d);
+						bucket = readByte(values);
 					}
 					int val = (bucket & (1 << bitNum)) > 0 ? 1 : 0;
 					pix.setV(val);
@@ -573,7 +614,7 @@ public class Nifti {
 					if (sz < 0) {
 						idx.set(2, dims[2] - saved2 - 1);
 					}
-					readValue(d, type, data_type, swapBytes, buf128);
+					readValue(values, type, data_type, swapBytes, buf128);
 					data.set(idx, type);
 					if ((!is_analyze && sx < 0) || (is_analyze && sx > 0)) {
 						idx.set(0, saved0);
@@ -592,7 +633,9 @@ public class Nifti {
 				}
 			}
 
-			System.out.println("DONE READING : bytes remaining in file = "+in.available());
+			System.out.println("DONE READING");
+			System.out.println("  bytes remaining in header file = " + f1.available());
+			System.out.println("  bytes remaining in values file = " + f2.available());
 			
 			data.setName("nifti file");
 			
@@ -644,19 +687,30 @@ public class Nifti {
 			
 			mergeData(bundle, type, data);
 
-			d.close();
+			if (two_files) {
+				values.close();
+			}
+			hdr.close();
 			
 			return bundle;
 
 		} catch (Exception e) {
 		
 			try {
-				if (d != null)
-					d.close();
-				else if (bf != null)
-					bf.close();
-				else if (in != null)
-					in.close();
+				if (values != hdr) { // two files
+					if (values != null)
+						values.close();
+					else if (bf2 != null)
+						bf2.close();
+					else if (f2 != null)
+						f2.close();
+				}
+				if (hdr != null)
+					hdr.close();
+				else if (bf1 != null)
+					bf1.close();
+				else if (f1 != null)
+					f1.close();
 			} catch (IOException x) {
 				;
 			}
