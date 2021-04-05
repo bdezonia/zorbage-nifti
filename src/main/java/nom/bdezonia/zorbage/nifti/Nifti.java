@@ -34,7 +34,7 @@ import java.io.BufferedInputStream;
  * 2) support published extensions if they makes sense for translation
  * 3) the 1-bit bool type is hinted at. I haven't found a lot of docs about it yet. do the bytes
  *      always only have unused space in the column direction? Also does endianness in any way affect
- *      the bit order to scan first (hi vs lo).
+ *      the bit order to scan first (hi vs lo). regardless is it always right to left bits or left to right?
  * 4) test ieee 128 bit decodings, 1-bit files, ANALYZE files, am I reading rgb argb components in the right order?
  */
 
