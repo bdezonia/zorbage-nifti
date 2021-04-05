@@ -563,9 +563,9 @@ public class Nifti {
 				byte bucket = 0;
 				while (itr.hasNext()) {
 					itr.next(idx);
-					long saved0 = idx.get(0);
-					long saved1 = idx.get(1);
-					long saved2 = idx.get(2);
+					long saved0 = (idx.numDimensions() > 0) ? idx.get(0) : 0;
+					long saved1 = (idx.numDimensions() > 1) ? idx.get(1) : 0;
+					long saved2 = (idx.numDimensions() > 2) ? idx.get(2) : 0;
 					// orient the axis data correctly
 					if ((!is_analyze && sx < 0) || (is_analyze && sx > 0)) {
 						idx.set(0, dims[0] - saved0 - 1);
@@ -607,9 +607,9 @@ public class Nifti {
 				SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
 				while (itr.hasNext()) {
 					itr.next(idx);
-					long saved0 = idx.get(0);
-					long saved1 = idx.get(1);
-					long saved2 = idx.get(2);
+					long saved0 = (idx.numDimensions() > 0) ? idx.get(0) : 0;
+					long saved1 = (idx.numDimensions() > 1) ? idx.get(1) : 0;
+					long saved2 = (idx.numDimensions() > 2) ? idx.get(2) : 0;
 					// orient the axis data correctly
 					if ((!is_analyze && sx < 0) || (is_analyze && sx > 0)) {
 						idx.set(0, dims[0] - saved0 - 1);
