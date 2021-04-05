@@ -668,17 +668,17 @@ public class Nifti {
 				data.setAxisEquation(3, new StringDefinedAxisEquation("" + toffset + " + " + spacings[3] + " * $0"));
 			}
 			if (numD > 4) {
-				data.setAxisType(4, "u");
+				data.setAxisType(4, "l");
 				data.setAxisUnit(4, units[4]);
 				data.setAxisEquation(4, new StringDefinedAxisEquation("" + spacings[4] + " * $0"));
 			}
 			if (numD > 5) {
-				data.setAxisType(5, "v");
+				data.setAxisType(5, "m");
 				data.setAxisUnit(5, units[5]);
 				data.setAxisEquation(5, new StringDefinedAxisEquation("" + spacings[5] + " * $0"));
 			}
 			if (numD > 6) {
-				data.setAxisType(6, "w");
+				data.setAxisType(6, "n");
 				data.setAxisUnit(6, units[6]);
 				data.setAxisEquation(6, new StringDefinedAxisEquation("" + spacings[6] + " * $0"));
 			}
