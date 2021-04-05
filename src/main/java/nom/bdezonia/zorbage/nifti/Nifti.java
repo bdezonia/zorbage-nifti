@@ -558,22 +558,22 @@ public class Nifti {
 				UnsignedInt1Member pix = G.UINT1.construct();
 				type = pix;
 				data = DimensionedStorage.allocate(pix, dims);
-				IntegerIndex idx = new IntegerIndex(data.numDimensions());
+				IntegerIndex idx = new IntegerIndex((int)numD);
 				SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
 				byte bucket = 0;
 				while (itr.hasNext()) {
 					itr.next(idx);
-					long saved0 = (idx.numDimensions() > 0) ? idx.get(0) : 0;
-					long saved1 = (idx.numDimensions() > 1) ? idx.get(1) : 0;
-					long saved2 = (idx.numDimensions() > 2) ? idx.get(2) : 0;
+					long saved0 = (numD > 0) ? idx.get(0) : 0;
+					long saved1 = (numD > 1) ? idx.get(1) : 0;
+					long saved2 = (numD > 2) ? idx.get(2) : 0;
 					// orient the axis data correctly
-					if ((!is_analyze && sx < 0) || (is_analyze && sx > 0)) {
+					if ((numD > 0) && ((!is_analyze && sx < 0) || (is_analyze && sx > 0))) {
 						idx.set(0, dims[0] - saved0 - 1);
 					}
-					if (sy > 0) {
+					if ((numD > 1) && sy > 0) {
 						idx.set(1, dims[1] - saved1 - 1);
 					}
-					if (sz < 0) {
+					if ((numD > 2) && sz < 0) {
 						idx.set(2, dims[2] - saved2 - 1);
 					}
 					int bitNum = (int) (idx.get(0) % 8); 
@@ -583,13 +583,13 @@ public class Nifti {
 					int val = (bucket & (1 << bitNum)) > 0 ? 1 : 0;
 					pix.setV(val);
 					data.set(idx, pix);
-					if ((!is_analyze && sx < 0) || (is_analyze && sx > 0)) {
+					if ((numD > 0) && ((!is_analyze && sx < 0) || (is_analyze && sx > 0))) {
 						idx.set(0, saved0);
 					}
-					if (sy > 0) {
+					if ((numD > 1) && sy > 0) {
 						idx.set(1, saved1);
 					}
-					if (sz < 0) {
+					if ((numD > 2) && sz < 0) {
 						idx.set(2, saved2);
 					}
 				}
@@ -603,32 +603,32 @@ public class Nifti {
 				// all other types are straightforward
 				type = value(data_type);
 				data = DimensionedStorage.allocate(type, dims);
-				IntegerIndex idx = new IntegerIndex(data.numDimensions());
+				IntegerIndex idx = new IntegerIndex((int) numD);
 				SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
 				while (itr.hasNext()) {
 					itr.next(idx);
-					long saved0 = (idx.numDimensions() > 0) ? idx.get(0) : 0;
-					long saved1 = (idx.numDimensions() > 1) ? idx.get(1) : 0;
-					long saved2 = (idx.numDimensions() > 2) ? idx.get(2) : 0;
+					long saved0 = (numD > 0) ? idx.get(0) : 0;
+					long saved1 = (numD > 1) ? idx.get(1) : 0;
+					long saved2 = (numD > 2) ? idx.get(2) : 0;
 					// orient the axis data correctly
-					if ((!is_analyze && sx < 0) || (is_analyze && sx > 0)) {
+					if ((numD > 0) && ((!is_analyze && sx < 0) || (is_analyze && sx > 0))) {
 						idx.set(0, dims[0] - saved0 - 1);
 					}
-					if (sy > 0) {
+					if ((numD > 1) && sy > 0) {
 						idx.set(1, dims[1] - saved1 - 1);
 					}
-					if (sz < 0) {
+					if ((numD > 2) && sz < 0) {
 						idx.set(2, dims[2] - saved2 - 1);
 					}
 					readValue(values, type, data_type, swapBytes, buf128);
 					data.set(idx, type);
-					if ((!is_analyze && sx < 0) || (is_analyze && sx > 0)) {
+					if ((numD > 0) && ((!is_analyze && sx < 0) || (is_analyze && sx > 0))) {
 						idx.set(0, saved0);
 					}
-					if (sy > 0) {
+					if ((numD > 1) && sy > 0) {
 						idx.set(1, saved1);
 					}
-					if (sz < 0) {
+					if ((numD > 2) && sz < 0) {
 						idx.set(2, saved2);
 					}
 				}
@@ -647,37 +647,37 @@ public class Nifti {
 			
 			data.setSource(filename);
 			
-			if (data.numDimensions() > 0) {
+			if (numD > 0) {
 				data.setAxisType(0, "x");
 				data.setAxisUnit(0, units[0]);
 				data.setAxisEquation(0, new StringDefinedAxisEquation("" + spacings[0] + " * $0"));
 			}
-			if (data.numDimensions() > 1) {
+			if (numD > 1) {
 				data.setAxisType(1, "y");
 				data.setAxisUnit(1, units[1]);
 				data.setAxisEquation(1, new StringDefinedAxisEquation("" + spacings[1] + " * $0"));
 			}
-			if (data.numDimensions() > 2) {
+			if (numD > 2) {
 				data.setAxisType(2, "z");
 				data.setAxisUnit(2, units[2]);
 				data.setAxisEquation(2, new StringDefinedAxisEquation("" + spacings[2] + " * $0"));
 			}
-			if (data.numDimensions() > 3) {
+			if (numD > 3) {
 				data.setAxisType(3, "t");
 				data.setAxisUnit(3, units[3]);
 				data.setAxisEquation(3, new StringDefinedAxisEquation("" + toffset + " + " + spacings[3] + " * $0"));
 			}
-			if (data.numDimensions() > 4) {
+			if (numD > 4) {
 				data.setAxisType(4, "u");
 				data.setAxisUnit(4, units[4]);
 				data.setAxisEquation(4, new StringDefinedAxisEquation("" + spacings[4] + " * $0"));
 			}
-			if (data.numDimensions() > 5) {
+			if (numD > 5) {
 				data.setAxisType(5, "v");
 				data.setAxisUnit(5, units[5]);
 				data.setAxisEquation(5, new StringDefinedAxisEquation("" + spacings[5] + " * $0"));
 			}
-			if (data.numDimensions() > 6) {
+			if (numD > 6) {
 				data.setAxisType(6, "w");
 				data.setAxisUnit(6, units[6]);
 				data.setAxisEquation(6, new StringDefinedAxisEquation("" + spacings[6] + " * $0"));
@@ -1227,10 +1227,11 @@ public class Nifti {
 	
 	// https://en.wikipedia.org/wiki/Quadruple-precision_floating-point_format
 	
+	// Decode the 16 bytes here as a IEEE 128 bit float and then convert that value into a BigDecimal.
+	//   One gotcha: can't represent NaNs or infinities this way.
+	//   Maybe I will treat infinities as MAX or MIN and NaNs as 0.
+
 	private static BigDecimal decodeFloat128(byte[] buffer) {
-		// Decode the 16 bytes here as a IEEE 128 bit float and then convert that value into a BigDecimal.
-		//   One gotcha: can't represent NaNs or infinities this way.
-		//   Maybe I will treat infinities as MAX or MIN and NaNs as 0.
 		
 		int sign = 0;
 		int exponent = 0;
