@@ -769,7 +769,7 @@ public class Nifti {
 					if ((numD > 2) && sz < 0) {
 						idx.set(2, dims[2] - saved2 - 1);
 					}
-					readValue(values, type, data_type, swapBytes, buf128);
+					readValue(values, data_type, swapBytes, buf128, type);
 					data.set(idx, type);
 					if ((numD > 0) && ((!is_analyze && sx < 0) || (is_analyze && sx > 0))) {
 						idx.set(0, saved0);
@@ -917,7 +917,7 @@ public class Nifti {
 		}
 	}
 
-	private static void readValue(DataInputStream d, Allocatable type, short data_type, boolean swapBytes, byte[] buf128) throws IOException {
+	private static void readValue(DataInputStream d, short data_type, boolean swapBytes, byte[] buf128, Allocatable type) throws IOException {
 		byte tb;
 		short ts;
 		int ti;
