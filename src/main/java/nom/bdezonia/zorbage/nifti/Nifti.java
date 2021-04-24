@@ -49,6 +49,8 @@ import nom.bdezonia.zorbage.algebra.Allocatable;
 import nom.bdezonia.zorbage.algebra.G;
 import nom.bdezonia.zorbage.algorithm.GridIterator;
 import nom.bdezonia.zorbage.algorithm.Transform2;
+import nom.bdezonia.zorbage.axis.CoordinateSpace;
+import nom.bdezonia.zorbage.axis.LinearNdCoordinateSpace;
 import nom.bdezonia.zorbage.axis.StringDefinedAxisEquation;
 import nom.bdezonia.zorbage.data.DimensionedDataSource;
 import nom.bdezonia.zorbage.data.DimensionedStorage;
@@ -793,42 +795,48 @@ public class Nifti {
 			
 			data.setSource(filename);
 			
+			BigDecimal[] scales = new BigDecimal[(int)numD];
+			BigDecimal[] offsets = new BigDecimal[(int)numD];
+
 			if (numD > 0) {
 				data.setAxisType(0, "x");
 				data.setAxisUnit(0, units[0]);
-				data.setAxisEquation(0, new StringDefinedAxisEquation("" + spacings[0] + " * $0"));
+				scales[0] = BigDecimal.valueOf(spacings[0]);
 			}
 			if (numD > 1) {
 				data.setAxisType(1, "y");
 				data.setAxisUnit(1, units[1]);
-				data.setAxisEquation(1, new StringDefinedAxisEquation("" + spacings[1] + " * $0"));
+				scales[1] = BigDecimal.valueOf(spacings[1]);
 			}
 			if (numD > 2) {
 				data.setAxisType(2, "z");
 				data.setAxisUnit(2, units[2]);
-				data.setAxisEquation(2, new StringDefinedAxisEquation("" + spacings[2] + " * $0"));
+				scales[2] = BigDecimal.valueOf(spacings[2]);
 			}
 			if (numD > 3) {
 				data.setAxisType(3, "t");
 				data.setAxisUnit(3, units[3]);
-				data.setAxisEquation(3, new StringDefinedAxisEquation("" + toffset + " + " + spacings[3] + " * $0"));
+				scales[3] = BigDecimal.valueOf(spacings[3]);
+				offsets[3] = BigDecimal.valueOf(toffset);
 			}
 			if (numD > 4) {
 				data.setAxisType(4, "l");
 				data.setAxisUnit(4, units[4]);
-				data.setAxisEquation(4, new StringDefinedAxisEquation("" + spacings[4] + " * $0"));
+				scales[4] = BigDecimal.valueOf(spacings[4]);
 			}
 			if (numD > 5) {
 				data.setAxisType(5, "m");
 				data.setAxisUnit(5, units[5]);
-				data.setAxisEquation(5, new StringDefinedAxisEquation("" + spacings[5] + " * $0"));
+				scales[5] = BigDecimal.valueOf(spacings[5]);
 			}
 			if (numD > 6) {
 				data.setAxisType(6, "n");
 				data.setAxisUnit(6, units[6]);
-				data.setAxisEquation(6, new StringDefinedAxisEquation("" + spacings[6] + " * $0"));
+				scales[6] = BigDecimal.valueOf(spacings[6]);
 			}
 
+			data.setCoordinateSpace(new LinearNdCoordinateSpace(scales, offsets));
+			
 			data.metadata().putAll(metadata);
 			
 			data.metadata().put("auxiliary file name", auxname);
