@@ -32,7 +32,12 @@ import java.io.BufferedInputStream;
  * 3) the 1-bit bool type is hinted at. I haven't found a lot of docs about it yet. do the bytes
  *      always only have unused space in the column direction? Also does endianness in any way affect
  *      the bit order to scan first (hi vs lo). regardless is it always right to left bits or left to right?
- * 4) test ieee 128 bit decodings, 1-bit files, ANALYZE files, am I reading rgb argb components in the right order?
+ * 4) test ieee 128 bit decodings, 1-bit files, ANALYZE files, am I reading rgb/argb components in the right order?
+ * 5) if you create an affine coord space should you multiply its scales by the pixel spacings? Or do the params
+ *      already contain that info? depending on that choice do you also set axis offsets and spacings of the data
+ *      source to 0 and 1?
+ * 6) if numD == 4 (a common case I would think) should I hatch an Affine4d space that is 3d with time row just
+ *      translating by toffset and maybe scaling by spacings[3] but no other params set?
  */
 
 import java.io.DataInputStream;
@@ -49,6 +54,8 @@ import nom.bdezonia.zorbage.algebra.Allocatable;
 import nom.bdezonia.zorbage.algebra.G;
 import nom.bdezonia.zorbage.algorithm.GridIterator;
 import nom.bdezonia.zorbage.algorithm.Transform2;
+import nom.bdezonia.zorbage.axis.Affine2dCoordinateSpace;
+import nom.bdezonia.zorbage.axis.Affine3dCoordinateSpace;
 import nom.bdezonia.zorbage.axis.CoordinateSpace;
 import nom.bdezonia.zorbage.axis.LinearNdCoordinateSpace;
 import nom.bdezonia.zorbage.axis.StringDefinedAxisEquation;
@@ -147,8 +154,17 @@ public class Nifti {
 			String intent;
 			
 			double sx = 0;
+			double x1 = 0;
+			double x2 = 0;
+			double x3 = 0;
+			double y0 = 0;
 			double sy = 0;
+			double y2 = 0;
+			double y3 = 0;
+			double z0 = 0;
+			double z1 = 0;
 			double sz = 0;
+			double z3 = 0;
 			
 			boolean is_analyze = false;
 			
@@ -347,17 +363,17 @@ public class Nifti {
 				// affine transform : row 0 = x, row 1 = y, row 2 = z
 				
 				sx = readFloat(hdr, swapBytes);
-				float x1 = readFloat(hdr, swapBytes);
-				float x2 = readFloat(hdr, swapBytes);
-				float x3 = readFloat(hdr, swapBytes);
-				float y0 = readFloat(hdr, swapBytes);
+				x1 = readFloat(hdr, swapBytes);
+				x2 = readFloat(hdr, swapBytes);
+				x3 = readFloat(hdr, swapBytes);
+				y0 = readFloat(hdr, swapBytes);
 				sy = readFloat(hdr, swapBytes);
-				float y2 = readFloat(hdr, swapBytes);
-				float y3 = readFloat(hdr, swapBytes);
-				float z0 = readFloat(hdr, swapBytes);
-				float z1 = readFloat(hdr, swapBytes);
+				y2 = readFloat(hdr, swapBytes);
+				y3 = readFloat(hdr, swapBytes);
+				z0 = readFloat(hdr, swapBytes);
+				z1 = readFloat(hdr, swapBytes);
 				sz = readFloat(hdr, swapBytes);
-				float z3 = readFloat(hdr, swapBytes);
+				z3 = readFloat(hdr, swapBytes);
 
 				metadata.put("NIFTI HEADER: affine x0 parameter = ", Double.toString(sx));
 				metadata.put("NIFTI HEADER: affine x1 parameter = ", Double.toString(x1));
@@ -568,17 +584,17 @@ public class Nifti {
 				// affine transform : row 0 = x, row 1 = y, row 2 = z
 				
 				sx = readDouble(hdr, swapBytes);
-				double x1 = readDouble(hdr, swapBytes);
-				double x2 = readDouble(hdr, swapBytes);
-				double x3 = readDouble(hdr, swapBytes);
-				double y0 = readDouble(hdr, swapBytes);
+				x1 = readDouble(hdr, swapBytes);
+				x2 = readDouble(hdr, swapBytes);
+				x3 = readDouble(hdr, swapBytes);
+				y0 = readDouble(hdr, swapBytes);
 				sy = readDouble(hdr, swapBytes);
-				double y2 = readDouble(hdr, swapBytes);
-				double y3 = readDouble(hdr, swapBytes);
-				double z0 = readDouble(hdr, swapBytes);
-				double z1 = readDouble(hdr, swapBytes);
+				y2 = readDouble(hdr, swapBytes);
+				y3 = readDouble(hdr, swapBytes);
+				z0 = readDouble(hdr, swapBytes);
+				z1 = readDouble(hdr, swapBytes);
 				sz = readDouble(hdr, swapBytes);
-				double z3 = readDouble(hdr, swapBytes);
+				z3 = readDouble(hdr, swapBytes);
 
 				metadata.put("NIFTI HEADER: affine x0 parameter = ", Double.toString(sx));
 				metadata.put("NIFTI HEADER: affine x1 parameter = ", Double.toString(x1));
@@ -835,7 +851,35 @@ public class Nifti {
 				scales[6] = BigDecimal.valueOf(spacings[6]);
 			}
 
-			data.setCoordinateSpace(new LinearNdCoordinateSpace(scales, offsets));
+			CoordinateSpace cspace;
+			if ((numD == 2) &&
+					(
+						(sx != 1 || x1 != 0 || x3 != 0) ||
+						(y0 != 0 || sy != 1 || y3 != 0)
+					)
+				)
+			{
+				cspace = new Affine2dCoordinateSpace(
+						BigDecimal.valueOf(sx), BigDecimal.valueOf(x1), BigDecimal.valueOf(x3),
+						BigDecimal.valueOf(y0), BigDecimal.valueOf(sy), BigDecimal.valueOf(y3));
+			}
+			if ((numD == 3) &&
+					(
+						(sx != 1 || x1 != 0 || x2 != 0 || x3 != 0) ||
+						(y0 != 0 || sy != 1 || y2 != 0 || y3 != 0) ||
+						(z0 != 0 || z1 != 0 || sz != 1 || z3 != 0)
+					)
+				)
+			{
+				cspace = new Affine3dCoordinateSpace(
+						BigDecimal.valueOf(sx), BigDecimal.valueOf(x1), BigDecimal.valueOf(x2), BigDecimal.valueOf(x3),
+						BigDecimal.valueOf(y0), BigDecimal.valueOf(sy), BigDecimal.valueOf(y2), BigDecimal.valueOf(y3),
+						BigDecimal.valueOf(z0), BigDecimal.valueOf(z1), BigDecimal.valueOf(sz), BigDecimal.valueOf(z3));
+			}
+			else {
+				cspace = new LinearNdCoordinateSpace(scales, offsets);
+			}
+			data.setCoordinateSpace(cspace);
 			
 			data.metadata().putAll(metadata);
 			
