@@ -90,7 +90,7 @@ import nom.bdezonia.zorbage.type.real.highprec.HighPrecisionMember;
  * @author Barry DeZonia
  *
  */
-@SuppressWarnings({"rawtypes", "unused","unchecked"})
+@SuppressWarnings({"rawtypes", "unused", "unchecked"})
 public class Nifti {
 	
 	/**
