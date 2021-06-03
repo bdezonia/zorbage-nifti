@@ -27,16 +27,15 @@ import java.io.BufferedInputStream;
 
 /*
  * TODO
- * 1) support float 128 bit ieee types (especially with nans and infinities) when zorbage provides them
- * 2) support published extensions if they makes sense for translation
- * 3) the 1-bit bool type is hinted at. I haven't found a lot of docs about it yet. do the bytes
+ * 1) support published extensions if they makes sense for translation
+ * 2) the 1-bit bool type is hinted at. I haven't found a lot of docs about it yet. do the bytes
  *      always only have unused space in the column direction? Also does endianness in any way affect
  *      the bit order to scan first (hi vs lo). regardless is it always right to left bits or left to right?
- * 4) test ieee 128 bit decodings, 1-bit files, ANALYZE files, am I reading rgb/argb components in the right order?
- * 5) if you create an affine coord space should you multiply its scales by the pixel spacings? Or do the params
+ * 3) test ieee 128 bit decodings, 1-bit files, ANALYZE files, am I reading rgb/argb components in the right order?
+ * 4) if you create an affine coord space should you multiply its scales by the pixel spacings? Or do the params
  *      already contain that info? depending on that choice do you also set axis offsets and spacings of the data
  *      source to 0 and 1?
- * 6) if numD == 4 (a common case I would think) should I hatch an Affine4d space that is 3d with time row just
+ * 5) if numD == 4 (a common case I would think) should I hatch an Affine4d space that is 3d with time row just
  *      translating by toffset and maybe scaling by spacings[3] but no other params set?
  */
 
@@ -81,6 +80,7 @@ import nom.bdezonia.zorbage.type.integer.int64.SignedInt64Member;
 import nom.bdezonia.zorbage.type.integer.int64.UnsignedInt64Member;
 import nom.bdezonia.zorbage.type.integer.int8.SignedInt8Member;
 import nom.bdezonia.zorbage.type.integer.int8.UnsignedInt8Member;
+import nom.bdezonia.zorbage.type.real.float128.Float128Member;
 import nom.bdezonia.zorbage.type.real.float32.Float32Member;
 import nom.bdezonia.zorbage.type.real.float64.Float64Member;
 import nom.bdezonia.zorbage.type.real.highprec.HighPrecisionMember;
@@ -953,8 +953,8 @@ public class Nifti {
 			return G.INT64.construct();
 		case 1280: // uint64
 			return G.UINT64.construct();
-		case 1536: // float128 : treat as highprec
-			return G.HP.construct();
+		case 1536: // float128
+			return G.QUAD.construct();
 		case 1792: // cfloat64
 			return G.CDBL.construct();
 		case 2048: // cfloat128 : treat as highprec
@@ -967,6 +967,7 @@ public class Nifti {
 	}
 
 	private static void readValue(DataInputStream d, short data_type, boolean swapBytes, byte[] buf128, Allocatable type) throws IOException {
+		
 		byte tb;
 		short ts;
 		int ti;
@@ -974,6 +975,8 @@ public class Nifti {
 		float tf;
 		double td;
 		BigDecimal tbd;
+		Float128Member flt128Val = G.QUAD.construct();
+				
 		switch (data_type) {
 		case 1: // bit
 			throw new IllegalArgumentException("bit types should never pass through this routine");
@@ -1031,9 +1034,8 @@ public class Nifti {
 			tl = readLong(d, swapBytes);
 			((UnsignedInt64Member) type).setV(tl);
 			break;
-		case 1536: // float128 : treat as highprec
-			tbd = readFloat128(d, swapBytes, buf128);
-			((HighPrecisionMember) type).setV(tbd);
+		case 1536: // float128
+			readFloat128(d, swapBytes, buf128, (Float128Member) type);
 			break;
 		case 1792: // cfloat64
 			td = readDouble(d, swapBytes);
@@ -1042,10 +1044,10 @@ public class Nifti {
 			((ComplexFloat64Member) type).setI(td);
 			break;
 		case 2048: // cfloat128 : treat as highprec
-			tbd = readFloat128(d, swapBytes, buf128);
-			((ComplexHighPrecisionMember) type).setR(tbd);
-			tbd = readFloat128(d, swapBytes, buf128);
-			((ComplexHighPrecisionMember) type).setI(tbd);
+			readFloat128(d, swapBytes, buf128, flt128Val);
+			((ComplexHighPrecisionMember) type).setR(flt128Val.v());
+			readFloat128(d, swapBytes, buf128, flt128Val);
+			((ComplexHighPrecisionMember) type).setI(flt128Val.v());
 			break;
 		case 2304: // rgba
 			tb = readByte(d);
@@ -1275,6 +1277,22 @@ public class Nifti {
 			};
 			Transform2.compute(G.CDBL, G.CDBL, proc, (IndexedDataSource<ComplexFloat64Member>) data.rawData(), (IndexedDataSource<ComplexFloat64Member>) returnDs.rawData());
 		}
+		else if (type instanceof Float128Member) {
+			returnAlg = G.QUAD;
+			returnDs = data;
+			Float128Member scaled = G.QUAD.construct();
+			Float128Member translation = G.QUAD.construct();
+			Procedure2<Float128Member,Float128Member> proc = new Procedure2<Float128Member,Float128Member>() {
+				@Override
+				public void call(Float128Member a, Float128Member b) {
+					G.QUAD.scaleByDouble().call(slope, a, scaled);
+					translation.setV(BigDecimal.valueOf(intercept));
+					G.QUAD.add().call(scaled, translation, b);
+				}
+			};
+			Transform2.compute(G.QUAD, G.QUAD, proc, (IndexedDataSource<Float128Member>) data.rawData(), (IndexedDataSource<Float128Member>) returnDs.rawData());
+		}
+		// TODO : need a ComplexFloat128Member clause here when it is done.
 		else if (type instanceof HighPrecisionMember) {
 			returnAlg = G.HP;
 			returnDs = data;
@@ -1371,7 +1389,7 @@ public class Nifti {
 		return str.toString();
 	}
 	
-	private static BigDecimal readFloat128(DataInputStream str, boolean swapBytes, byte[] buffer) throws IOException {
+	private static void readFloat128(DataInputStream str, boolean swapBytes, byte[] buffer, Float128Member val) throws IOException {
 		
 		if (buffer.length != 16)
 			throw new IllegalArgumentException("byte buffer has incorrect size");
@@ -1388,7 +1406,7 @@ public class Nifti {
 			}
 		}
 		
-		return decodeFloat128(buffer);
+		val.fromByteArray(buffer, 0);
 	}
 	
 	private static short swapShort(short in) {
@@ -1416,101 +1434,4 @@ public class Nifti {
 		long b7 = (in >> 56) & 0xff;
 		return (b0 << 56) | (b1 << 48) | (b2 << 40) | (b3 << 32) | (b4 << 24) | (b5 << 16) | (b6 << 8) | (b7 << 0);
 	}
-	
-	// https://en.wikipedia.org/wiki/Quadruple-precision_floating-point_format
-	
-	// Decode the 16 bytes here as a IEEE 128 bit float and then convert that value into a BigDecimal.
-	//   One gotcha: can't represent NaNs or infinities this way.
-	//   Maybe I will treat infinities as MAX or MIN and NaNs as 0.
-
-	private static BigDecimal decodeFloat128(byte[] buffer) {
-		
-		int sign = 0;
-		int exponent = 0;
-		BigInteger fraction = BigInteger.ZERO;
-		
-		sign = (buffer[15] & 0x80);
-		
-		exponent = ((buffer[15] & 0x7f) << 8) + (buffer[14] & 0xff);
-		
-		for (int i = 13; i <= 0; i--) {
-			fraction = fraction.shiftLeft(8).add(BigInteger.valueOf(buffer[i] & 0xff));
-		}
-
-		if ((exponent > 0) && (exponent < 0x7fff)) {
-			// a regular number
-			//   (−1)signbit × 2exponentbits2 − 16383 × 1.significandbits2
-			BigDecimal two = BigDecimal.valueOf(2);
-			BigDecimal value = BigDecimal.ONE;
-			BigDecimal inc = BigDecimal.valueOf(0.5);
-			for (int i = 111; i >= 0; i--) {
-				if (fraction.testBit(i))
-					value.add(inc);
-				inc = inc.divide(two);
-			}
-			BigDecimal scale = two.pow(exponent - 16383);
-			value = value.multiply(scale);
-			if (sign != 0) {
-				return value.negate();
-			}
-			else {
-				return value;
-			}
-		}
-		else if (exponent == 0) {
-			if (fraction.compareTo(BigInteger.ZERO) == 0) {
-				if (sign != 0) {
-					return BigDecimal.valueOf(-0.0);
-				}
-				else {
-					return BigDecimal.valueOf(0.0);
-				}
-			}
-			else { // fraction does not equal zero
-				// subnormal number
-				//   (−1)signbit × 2−16382 × 0.significandbits2
-				BigDecimal two = BigDecimal.valueOf(2);
-				BigDecimal value = BigDecimal.ZERO;
-				BigDecimal inc = BigDecimal.valueOf(0.5);
-				for (int i = 111; i >= 0; i--) {
-					if (fraction.testBit(i))
-						value.add(inc);
-					inc = inc.divide(two);
-				}
-				BigDecimal scale = two.pow(-16382);
-				value = value.multiply(scale);
-				if (sign != 0) {
-					return value.negate();
-				}
-				else {
-					return value;
-				}
-			}
-		}
-		else {
-			// exponent == 0x7fff
-			if (fraction.compareTo(BigInteger.ZERO) == 0) {
-				// an infinity : replace with min or max
-				// TODO not the best decision but good enough for now
-				//   max = 2^16383 × (2 − 2^−112)
-				//   min = -max
-				BigDecimal two = BigDecimal.valueOf(2);
-				BigDecimal value = two.pow(16383);
-				BigDecimal frac = two.subtract(two.pow(-112));
-				value = value.multiply(frac);
-				if (sign != 0) {
-					return value.negate();
-				}
-				else {
-					return value;
-				}
-			}
-			else { // fraction does not equal zero
-				// a nan : replace with 0
-				// TODO not the best decision but good enough for now
-				return BigDecimal.ZERO;
-			}
-		}
-	}
-	
  }
