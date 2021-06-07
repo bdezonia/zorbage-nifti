@@ -68,6 +68,7 @@ import nom.bdezonia.zorbage.sampling.SamplingIterator;
 import nom.bdezonia.zorbage.tuple.Tuple2;
 import nom.bdezonia.zorbage.type.color.ArgbMember;
 import nom.bdezonia.zorbage.type.color.RgbMember;
+import nom.bdezonia.zorbage.type.complex.float128.ComplexFloat128Member;
 import nom.bdezonia.zorbage.type.complex.float32.ComplexFloat32Member;
 import nom.bdezonia.zorbage.type.complex.float64.ComplexFloat64Member;
 import nom.bdezonia.zorbage.type.complex.highprec.ComplexHighPrecisionMember;
@@ -957,8 +958,8 @@ public class Nifti {
 			return G.QUAD.construct();
 		case 1792: // cfloat64
 			return G.CDBL.construct();
-		case 2048: // cfloat128 : treat as highprec
-			return G.CHP.construct();
+		case 2048: // cfloat128
+			return G.CQUAD.construct();
 		case 2304: // rgba
 			return G.ARGB.construct();
 		default:
@@ -1043,11 +1044,9 @@ public class Nifti {
 			td = readDouble(d, swapBytes);
 			((ComplexFloat64Member) type).setI(td);
 			break;
-		case 2048: // cfloat128 : treat as highprec
-			readFloat128(d, swapBytes, buf128, flt128Val);
-			((ComplexHighPrecisionMember) type).setR(flt128Val.v());
-			readFloat128(d, swapBytes, buf128, flt128Val);
-			((ComplexHighPrecisionMember) type).setI(flt128Val.v());
+		case 2048: // cfloat128
+			readFloat128(d, swapBytes, buf128, ((ComplexFloat128Member) type).r());
+			readFloat128(d, swapBytes, buf128, ((ComplexFloat128Member) type).i());
 			break;
 		case 2304: // rgba
 			tb = readByte(d);
@@ -1104,6 +1103,12 @@ public class Nifti {
 		}
 		else if (type instanceof ComplexFloat64Member) {
 			bundle.mergeComplexFlt64(data);
+		}
+		else if (type instanceof Float128Member) {
+			bundle.mergeFlt128(data);
+		}
+		else if (type instanceof ComplexFloat128Member) {
+			bundle.mergeComplexFlt128(data);
 		}
 		else if (type instanceof HighPrecisionMember) {
 			bundle.mergeHP(data);
@@ -1292,7 +1297,21 @@ public class Nifti {
 			};
 			Transform2.compute(G.QUAD, G.QUAD, proc, (IndexedDataSource<Float128Member>) data.rawData(), (IndexedDataSource<Float128Member>) returnDs.rawData());
 		}
-		// TODO : need a ComplexFloat128Member clause here when it is done.
+		else if (type instanceof ComplexFloat128Member) {
+			returnAlg = G.CQUAD;
+			returnDs = data;
+			ComplexFloat128Member scaled = G.CQUAD.construct();
+			ComplexFloat128Member translation = G.CQUAD.construct();
+			Procedure2<ComplexFloat128Member,ComplexFloat128Member> proc = new Procedure2<ComplexFloat128Member,ComplexFloat128Member>() {
+				@Override
+				public void call(ComplexFloat128Member a, ComplexFloat128Member b) {
+					G.CQUAD.scaleByDouble().call(slope, a, scaled);
+					translation.setR(BigDecimal.valueOf(intercept));
+					G.CQUAD.add().call(scaled, translation, b);
+				}
+			};
+			Transform2.compute(G.CQUAD, G.CQUAD, proc, (IndexedDataSource<ComplexFloat128Member>) data.rawData(), (IndexedDataSource<ComplexFloat128Member>) returnDs.rawData());
+		}
 		else if (type instanceof HighPrecisionMember) {
 			returnAlg = G.HP;
 			returnDs = data;
@@ -1393,16 +1412,15 @@ public class Nifti {
 		
 		if (buffer.length != 16)
 			throw new IllegalArgumentException("byte buffer has incorrect size");
-		
-		for (int i = 0; i < 16; i++) {
-			buffer[i] = str.readByte();
-		}
-		
+
 		if (swapBytes) {
-			for (int i = 0; i < 8; i++) {
-				byte tmp = buffer[i];
-				buffer[i] = buffer[15 - i];
-				buffer[15 - i] = tmp;
+			for (int i = 15; i >= 0; i--) {
+				buffer[i] = str.readByte();
+			}
+		}
+		else {
+			for (int i = 0; i < 16; i++) {
+				buffer[i] = str.readByte();
 			}
 		}
 		
@@ -1434,4 +1452,4 @@ public class Nifti {
 		long b7 = (in >> 56) & 0xff;
 		return (b0 << 56) | (b1 << 48) | (b2 << 40) | (b3 << 32) | (b4 << 24) | (b5 << 16) | (b6 << 8) | (b7 << 0);
 	}
- }
+}
