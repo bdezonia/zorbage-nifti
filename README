@@ -13,12 +13,12 @@ How to include zorbage-nifti in your Maven project
   <dependency>
     <groupId>io.github.bdezonia</groupId>
     <artifactId>zorbage-nifti</artifactId>
-    <version>0.0.8</version>
+    <version>0.0.9</version>
   </dependency>
   
 How to include zorbage-nifti in a different build system
 
-  See https://search.maven.org/artifact/io.github.bdezonia/zorbage-nifti/0.0.8/jar
+  See https://search.maven.org/artifact/io.github.bdezonia/zorbage-nifti/0.0.9/jar
   for instructions on how to reference zorbage-nifti in build systems such as
   Gradle or others.
 
