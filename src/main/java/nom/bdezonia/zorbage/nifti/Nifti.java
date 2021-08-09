@@ -188,12 +188,16 @@ public class Nifti {
 
 				metadata.putByte("NIFTI HEADER: dim info", dim_info);
 
-				// pixel dimensions
+				// image dimensions
 				
-				numD = readShort(hdr, false);
-				if (numD < 0 || numD > 7) {
-					numD = swapShort((short)numD);
+				short sNumD = readShort(hdr, false);
+				if (sNumD < 0 || sNumD > 7) {
 					swapBytes = true;
+					// now swap everything we've already read that could have been affected by endianess
+					numD = swapShort(sNumD);
+				}
+				else {
+					numD = sNumD;
 				}
 				short d1 = readShort(hdr, swapBytes);
 				short d2 = readShort(hdr, swapBytes);
@@ -452,12 +456,15 @@ public class Nifti {
 				data_type = readShort(hdr, false);
 				short bitpix = readShort(hdr, false);
 				
-				// pixel dimensions
+				// image dimensions
 				
 				numD = readLong(hdr, false);
 				if (numD < 0 || numD > 7) {
-					numD = swapLong(numD);
 					swapBytes = true;
+					// now swap everything we've already read that could have been affected by endianess
+					data_type = swapShort(data_type);
+					bitpix = swapShort(bitpix);
+					numD = swapLong(numD);
 				}
 				long d1 = readLong(hdr, swapBytes);
 				long d2 = readLong(hdr, swapBytes);
@@ -485,12 +492,6 @@ public class Nifti {
 				if (numD > 5) dims[5] = d6;
 				if (numD > 6) dims[6] = d7;
 
-				// some vars were read before we knew whether they needing swapping. swap them now.
-				if (swapBytes) {
-					data_type = swapShort(data_type);
-					bitpix = swapShort(bitpix);
-				}
-				
 				metadata.putInt("NIFTI HEADER: data_type", data_type);
 				metadata.putInt("NIFTI HEADER: bitpix", bitpix);
 
