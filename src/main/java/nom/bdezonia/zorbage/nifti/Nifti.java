@@ -176,7 +176,7 @@ public class Nifti {
 				
 				// possibly nifti 1
 				
-				metadata.putString("NIFTI HEADER: nifti version = ", "1");
+				metadata.putString("NIFTI HEADER: nifti version", "1");
 
 				System.out.println("Possibly NIFTI 1");
 
@@ -186,7 +186,7 @@ public class Nifti {
 				
 				byte dim_info = readByte(hdr);
 
-				metadata.putByte("NIFTI HEADER: dim info = ", dim_info);
+				metadata.putByte("NIFTI HEADER: dim info", dim_info);
 
 				// pixel dimensions
 				
@@ -212,14 +212,14 @@ public class Nifti {
 				if (numD > 5) dims[5] = d6;
 				if (numD > 6) dims[6] = d7;
 				
-				metadata.putLong("NIFTI HEADER: dim 0 = ", numD);
-				metadata.putLong("NIFTI HEADER: dim 1 = ", d1);
-				metadata.putLong("NIFTI HEADER: dim 2 = ", d2);
-				metadata.putLong("NIFTI HEADER: dim 3 = ", d3);
-				metadata.putLong("NIFTI HEADER: dim 4 = ", d4);
-				metadata.putLong("NIFTI HEADER: dim 5 = ", d5);
-				metadata.putLong("NIFTI HEADER: dim 6 = ", d6);
-				metadata.putLong("NIFTI HEADER: dim 7 = ", d7);
+				metadata.putLong("NIFTI HEADER: dim 0", numD);
+				metadata.putLong("NIFTI HEADER: dim 1", d1);
+				metadata.putLong("NIFTI HEADER: dim 2", d2);
+				metadata.putLong("NIFTI HEADER: dim 3", d3);
+				metadata.putLong("NIFTI HEADER: dim 4", d4);
+				metadata.putLong("NIFTI HEADER: dim 5", d5);
+				metadata.putLong("NIFTI HEADER: dim 6", d6);
+				metadata.putLong("NIFTI HEADER: dim 7", d7);
 
 				float nifti_intent_param1 = readFloat(hdr, swapBytes);
 				float nifti_intent_param2 = readFloat(hdr, swapBytes);
@@ -227,21 +227,21 @@ public class Nifti {
 								
 				short nifti_intent_code = readShort(hdr, swapBytes);
 
-				metadata.putInt("NIFTI HEADER: intent code = ", nifti_intent_code);
-				metadata.putDouble("NIFTI HEADER: intent param 1 = ", nifti_intent_param1);
-				metadata.putDouble("NIFTI HEADER: intent param 2 = ", nifti_intent_param2);
-				metadata.putDouble("NIFTI HEADER: intent param 3 = ", nifti_intent_param3);
+				metadata.putInt("NIFTI HEADER: intent code", nifti_intent_code);
+				metadata.putDouble("NIFTI HEADER: intent param 1", nifti_intent_param1);
+				metadata.putDouble("NIFTI HEADER: intent param 2", nifti_intent_param2);
+				metadata.putDouble("NIFTI HEADER: intent param 3", nifti_intent_param3);
 
 				data_type = readShort(hdr, swapBytes);
 				
 				short bitpix = readShort(hdr, swapBytes);
 				
-				metadata.putInt("NIFTI HEADER: data_type = ", data_type);
-				metadata.putInt("NIFTI HEADER: bitpix = ", bitpix);
+				metadata.putInt("NIFTI HEADER: data_type", data_type);
+				metadata.putInt("NIFTI HEADER: bitpix", bitpix);
 
 				short slice_start = readShort(hdr, swapBytes);
 
-				metadata.putLong("NIFTI HEADER: slice start = ", slice_start);
+				metadata.putLong("NIFTI HEADER: slice start", slice_start);
 
 				System.out.println("data type: "+data_type+" bitpix "+bitpix);
 				
@@ -265,34 +265,34 @@ public class Nifti {
 				if (numD > 5) spacings[5] = sd6;
 				if (numD > 6) spacings[6] = sd7;
 				
-				metadata.putDouble("NIFTI HEADER: axis 0 spacing = ", sd0);
-				metadata.putDouble("NIFTI HEADER: axis 1 spacing = ", sd1);
-				metadata.putDouble("NIFTI HEADER: axis 2 spacing = ", sd2);
-				metadata.putDouble("NIFTI HEADER: axis 3 spacing = ", sd3);
-				metadata.putDouble("NIFTI HEADER: axis 4 spacing = ", sd4);
-				metadata.putDouble("NIFTI HEADER: axis 5 spacing = ", sd5);
-				metadata.putDouble("NIFTI HEADER: axis 6 spacing = ", sd6);
-				metadata.putDouble("NIFTI HEADER: axis 7 spacing = ", sd7);
+				metadata.putDouble("NIFTI HEADER: axis 0 spacing", sd0);
+				metadata.putDouble("NIFTI HEADER: axis 1 spacing", sd1);
+				metadata.putDouble("NIFTI HEADER: axis 2 spacing", sd2);
+				metadata.putDouble("NIFTI HEADER: axis 3 spacing", sd3);
+				metadata.putDouble("NIFTI HEADER: axis 4 spacing", sd4);
+				metadata.putDouble("NIFTI HEADER: axis 5 spacing", sd5);
+				metadata.putDouble("NIFTI HEADER: axis 6 spacing", sd6);
+				metadata.putDouble("NIFTI HEADER: axis 7 spacing", sd7);
 
 				float vox_offset = readFloat(hdr, swapBytes);
 				
 				scl_slope = readFloat(hdr, swapBytes);
 				scl_inter = readFloat(hdr, swapBytes);
 
-				metadata.putDouble("NIFTI HEADER: scale slope = ", scl_slope);
-				metadata.putDouble("NIFTI HEADER: scale intercept = ", scl_inter);
+				metadata.putDouble("NIFTI HEADER: scale slope", scl_slope);
+				metadata.putDouble("NIFTI HEADER: scale intercept", scl_inter);
 
 				short slice_end = readShort(hdr, swapBytes);
 
-				metadata.putInt("NIFTI HEADER: slice end = ", slice_end);
+				metadata.putInt("NIFTI HEADER: slice end", slice_end);
 
 				byte slice_code = readByte(hdr);
 				
-				metadata.putInt("NIFTI HEADER: slice code = ", slice_code);
+				metadata.putInt("NIFTI HEADER: slice code", slice_code);
 				
 				byte xyzt_units = readByte(hdr);
 
-				metadata.putByte("NIFTI HEADER: xyzt units = ", xyzt_units);
+				metadata.putByte("NIFTI HEADER: xyzt units", xyzt_units);
 
 				int v;
 				units = new String[(int)numD];
@@ -323,14 +323,14 @@ public class Nifti {
 				float cal_max = readFloat(hdr, swapBytes);
 				float cal_min = readFloat(hdr, swapBytes);
 				
-				metadata.putDouble("NIFTI HEADER: calibration min = ", cal_max);
-				metadata.putDouble("NIFTI HEADER: calibration max = ", cal_min);
+				metadata.putDouble("NIFTI HEADER: calibration min", cal_max);
+				metadata.putDouble("NIFTI HEADER: calibration max", cal_min);
 				
 				float slice_duration = readFloat(hdr, swapBytes);
 				toffset = readFloat(hdr, swapBytes);
 
-				metadata.putDouble("NIFTI HEADER: slice duration = ", slice_duration);
-				metadata.putDouble("NIFTI HEADER: time offset = ", toffset);
+				metadata.putDouble("NIFTI HEADER: slice duration", slice_duration);
+				metadata.putDouble("NIFTI HEADER: time offset", toffset);
 
 				for (int i = 0; i < 2; i++) {
 					readInt(hdr, swapBytes);
@@ -340,8 +340,8 @@ public class Nifti {
 				
 				auxname = readString(hdr, 24);
 
-				metadata.putString("NIFTI HEADER: description = ", description);
-				metadata.putString("NIFTI HEADER: auxiliary file name = ", auxname);
+				metadata.putString("NIFTI HEADER: description", description);
+				metadata.putString("NIFTI HEADER: auxiliary file name", auxname);
 
 				short qform_code = readShort(hdr, swapBytes);
 				short sform_code = readShort(hdr, swapBytes);
@@ -353,14 +353,14 @@ public class Nifti {
 				float qoffset_y = readFloat(hdr, swapBytes);
 				float qoffset_z = readFloat(hdr, swapBytes);
 
-				metadata.putInt("NIFTI HEADER: qform code = ", qform_code);
-				metadata.putInt("NIFTI HEADER: sform_code = ", sform_code);
-				metadata.putDouble("NIFTI HEADER: quaternion b parameter = ", quatern_b);
-				metadata.putDouble("NIFTI HEADER: quaternion c parameter = ", quatern_c);
-				metadata.putDouble("NIFTI HEADER: quaternion d parameter = ", quatern_d);
-				metadata.putDouble("NIFTI HEADER: quaternion z parameter = ", qoffset_x);
-				metadata.putDouble("NIFTI HEADER: quaternion y parameter = ", qoffset_y);
-				metadata.putDouble("NIFTI HEADER: quaternion z parameter = ", qoffset_z);
+				metadata.putInt("NIFTI HEADER: qform code", qform_code);
+				metadata.putInt("NIFTI HEADER: sform_code", sform_code);
+				metadata.putDouble("NIFTI HEADER: quaternion b parameter", quatern_b);
+				metadata.putDouble("NIFTI HEADER: quaternion c parameter", quatern_c);
+				metadata.putDouble("NIFTI HEADER: quaternion d parameter", quatern_d);
+				metadata.putDouble("NIFTI HEADER: quaternion z parameter", qoffset_x);
+				metadata.putDouble("NIFTI HEADER: quaternion y parameter", qoffset_y);
+				metadata.putDouble("NIFTI HEADER: quaternion z parameter", qoffset_z);
 
 				// affine transform : row 0 = x, row 1 = y, row 2 = z
 				
@@ -377,22 +377,22 @@ public class Nifti {
 				sz = readFloat(hdr, swapBytes);
 				z3 = readFloat(hdr, swapBytes);
 
-				metadata.putDouble("NIFTI HEADER: affine x0 parameter = ", sx);
-				metadata.putDouble("NIFTI HEADER: affine x1 parameter = ", x1);
-				metadata.putDouble("NIFTI HEADER: affine x2 parameter = ", x2);
-				metadata.putDouble("NIFTI HEADER: affine x3 parameter = ", x3);
-				metadata.putDouble("NIFTI HEADER: affine y0 parameter = ", y0);
-				metadata.putDouble("NIFTI HEADER: affine y1 parameter = ", sy);
-				metadata.putDouble("NIFTI HEADER: affine y2 parameter = ", y2);
-				metadata.putDouble("NIFTI HEADER: affine y3 parameter = ", y3);
-				metadata.putDouble("NIFTI HEADER: affine z0 parameter = ", z0);
-				metadata.putDouble("NIFTI HEADER: affine z1 parameter = ", z1);
-				metadata.putDouble("NIFTI HEADER: affine z2 parameter = ", sz);
-				metadata.putDouble("NIFTI HEADER: affine z3 parameter = ", z3);
+				metadata.putDouble("NIFTI HEADER: affine x0 parameter", sx);
+				metadata.putDouble("NIFTI HEADER: affine x1 parameter", x1);
+				metadata.putDouble("NIFTI HEADER: affine x2 parameter", x2);
+				metadata.putDouble("NIFTI HEADER: affine x3 parameter", x3);
+				metadata.putDouble("NIFTI HEADER: affine y0 parameter", y0);
+				metadata.putDouble("NIFTI HEADER: affine y1 parameter", sy);
+				metadata.putDouble("NIFTI HEADER: affine y2 parameter", y2);
+				metadata.putDouble("NIFTI HEADER: affine y3 parameter", y3);
+				metadata.putDouble("NIFTI HEADER: affine z0 parameter", z0);
+				metadata.putDouble("NIFTI HEADER: affine z1 parameter", z1);
+				metadata.putDouble("NIFTI HEADER: affine z2 parameter", sz);
+				metadata.putDouble("NIFTI HEADER: affine z3 parameter", z3);
 
 				intent = readString(hdr, 16);
 
-				metadata.putString("NIFTI HEADER: intent = ", intent);
+				metadata.putString("NIFTI HEADER: intent", intent);
 
 				byte magic0 = readByte(hdr);
 				byte magic1 = readByte(hdr);
@@ -413,7 +413,7 @@ public class Nifti {
 					// For now expect the current header vars will work for us as is.
 					is_analyze = true;
 					two_files = true;
-					metadata.putString("NIFTI HEADER: nifti version = ", "pre NIFTI ANALYZE file");
+					metadata.putString("NIFTI HEADER: nifti version", "pre NIFTI ANALYZE file");
 				}
 			}
 			else if (headerSize == 540 || swapInt(headerSize) == 540) {
@@ -422,7 +422,7 @@ public class Nifti {
 				
 				System.out.println("Possibly NIFTI 2");
 
-				metadata.putString("NIFTI HEADER: nifti version = ", "2");
+				metadata.putString("NIFTI HEADER: nifti version", "2");
 
 				byte magic0 = readByte(hdr);
 				byte magic1 = readByte(hdr);
@@ -467,14 +467,14 @@ public class Nifti {
 				long d6 = readLong(hdr, swapBytes);
 				long d7 = readLong(hdr, swapBytes);
 				
-				metadata.putLong("NIFTI HEADER: dim 0 = ", numD);
-				metadata.putLong("NIFTI HEADER: dim 1 = ", d1);
-				metadata.putLong("NIFTI HEADER: dim 2 = ", d2);
-				metadata.putLong("NIFTI HEADER: dim 3 = ", d3);
-				metadata.putLong("NIFTI HEADER: dim 4 = ", d4);
-				metadata.putLong("NIFTI HEADER: dim 5 = ", d5);
-				metadata.putLong("NIFTI HEADER: dim 6 = ", d6);
-				metadata.putLong("NIFTI HEADER: dim 7 = ", d7);
+				metadata.putLong("NIFTI HEADER: dim 0", numD);
+				metadata.putLong("NIFTI HEADER: dim 1", d1);
+				metadata.putLong("NIFTI HEADER: dim 2", d2);
+				metadata.putLong("NIFTI HEADER: dim 3", d3);
+				metadata.putLong("NIFTI HEADER: dim 4", d4);
+				metadata.putLong("NIFTI HEADER: dim 5", d5);
+				metadata.putLong("NIFTI HEADER: dim 6", d6);
+				metadata.putLong("NIFTI HEADER: dim 7", d7);
 
 				dims = new long[(int)numD];
 				if (numD > 0) dims[0] = d1;
@@ -491,8 +491,8 @@ public class Nifti {
 					bitpix = swapShort(bitpix);
 				}
 				
-				metadata.putInt("NIFTI HEADER: data_type = ", data_type);
-				metadata.putInt("NIFTI HEADER: bitpix = ", bitpix);
+				metadata.putInt("NIFTI HEADER: data_type", data_type);
+				metadata.putInt("NIFTI HEADER: bitpix", bitpix);
 
 				System.out.println("data type: "+data_type+" bitpix "+bitpix);
 				
@@ -520,49 +520,49 @@ public class Nifti {
 				if (numD > 5) spacings[5] = sd6;
 				if (numD > 6) spacings[6] = sd7;
 				
-				metadata.putDouble("NIFTI HEADER: axis 0 spacing = ", sd0);
-				metadata.putDouble("NIFTI HEADER: axis 1 spacing = ", sd1);
-				metadata.putDouble("NIFTI HEADER: axis 2 spacing = ", sd2);
-				metadata.putDouble("NIFTI HEADER: axis 3 spacing = ", sd3);
-				metadata.putDouble("NIFTI HEADER: axis 4 spacing = ", sd4);
-				metadata.putDouble("NIFTI HEADER: axis 5 spacing = ", sd5);
-				metadata.putDouble("NIFTI HEADER: axis 6 spacing = ", sd6);
-				metadata.putDouble("NIFTI HEADER: axis 7 spacing = ", sd7);
+				metadata.putDouble("NIFTI HEADER: axis 0 spacing", sd0);
+				metadata.putDouble("NIFTI HEADER: axis 1 spacing", sd1);
+				metadata.putDouble("NIFTI HEADER: axis 2 spacing", sd2);
+				metadata.putDouble("NIFTI HEADER: axis 3 spacing", sd3);
+				metadata.putDouble("NIFTI HEADER: axis 4 spacing", sd4);
+				metadata.putDouble("NIFTI HEADER: axis 5 spacing", sd5);
+				metadata.putDouble("NIFTI HEADER: axis 6 spacing", sd6);
+				metadata.putDouble("NIFTI HEADER: axis 7 spacing", sd7);
 
 				long vox_offset = readLong(hdr, swapBytes);
 				
 				scl_slope = readDouble(hdr, swapBytes);
 				scl_inter = readDouble(hdr, swapBytes);
 				
-				metadata.putDouble("NIFTI HEADER: scale slope = ", scl_slope);
-				metadata.putDouble("NIFTI HEADER: scale intercept = ", scl_inter);
+				metadata.putDouble("NIFTI HEADER: scale slope", scl_slope);
+				metadata.putDouble("NIFTI HEADER: scale intercept", scl_inter);
 
 				double cal_max = readDouble(hdr, swapBytes);
 				double cal_min = readDouble(hdr, swapBytes);
 				
-				metadata.putDouble("NIFTI HEADER: calibration min = ", cal_max);
-				metadata.putDouble("NIFTI HEADER: calibration max = ", cal_min);
+				metadata.putDouble("NIFTI HEADER: calibration min", cal_max);
+				metadata.putDouble("NIFTI HEADER: calibration max", cal_min);
 				
 				double slice_duration = readDouble(hdr, swapBytes);
 				toffset = readDouble(hdr, swapBytes);
 
-				metadata.putDouble("NIFTI HEADER: slice duration = ", slice_duration);
-				metadata.putDouble("NIFTI HEADER: time offset = ", toffset);
+				metadata.putDouble("NIFTI HEADER: slice duration", slice_duration);
+				metadata.putDouble("NIFTI HEADER: time offset", toffset);
 
 				long slice_start = readLong(hdr, swapBytes);
 				
-				metadata.putLong("NIFTI HEADER: slice start = ", slice_start);
+				metadata.putLong("NIFTI HEADER: slice start", slice_start);
 
 				long slice_end = readLong(hdr, swapBytes);
 
-				metadata.putLong("NIFTI HEADER: slice end = ", slice_end);
+				metadata.putLong("NIFTI HEADER: slice end", slice_end);
 
 				description = readString(hdr, 80);
 
 				auxname = readString(hdr, 24);
 
-				metadata.putString("NIFTI HEADER: description = ", description);
-				metadata.putString("NIFTI HEADER: auxiliary file name = ", auxname);
+				metadata.putString("NIFTI HEADER: description", description);
+				metadata.putString("NIFTI HEADER: auxiliary file name", auxname);
 
 				int qform_code = readInt(hdr, swapBytes);
 				int sform_code = readInt(hdr, swapBytes);
@@ -574,14 +574,14 @@ public class Nifti {
 				double qoffset_y = readDouble(hdr, swapBytes);
 				double qoffset_z = readDouble(hdr, swapBytes);
 
-				metadata.putInt("NIFTI HEADER: qform code = ", qform_code);
-				metadata.putInt("NIFTI HEADER: sform_code = ", sform_code);
-				metadata.putDouble("NIFTI HEADER: quaternion b parameter = ", quatern_b);
-				metadata.putDouble("NIFTI HEADER: quaternion c parameter = ", quatern_c);
-				metadata.putDouble("NIFTI HEADER: quaternion d parameter = ", quatern_d);
-				metadata.putDouble("NIFTI HEADER: quaternion z parameter = ", qoffset_x);
-				metadata.putDouble("NIFTI HEADER: quaternion y parameter = ", qoffset_y);
-				metadata.putDouble("NIFTI HEADER: quaternion z parameter = ", qoffset_z);
+				metadata.putInt("NIFTI HEADER: qform code", qform_code);
+				metadata.putInt("NIFTI HEADER: sform_code", sform_code);
+				metadata.putDouble("NIFTI HEADER: quaternion b parameter", quatern_b);
+				metadata.putDouble("NIFTI HEADER: quaternion c parameter", quatern_c);
+				metadata.putDouble("NIFTI HEADER: quaternion d parameter", quatern_d);
+				metadata.putDouble("NIFTI HEADER: quaternion z parameter", qoffset_x);
+				metadata.putDouble("NIFTI HEADER: quaternion y parameter", qoffset_y);
+				metadata.putDouble("NIFTI HEADER: quaternion z parameter", qoffset_z);
 
 				// affine transform : row 0 = x, row 1 = y, row 2 = z
 				
@@ -598,26 +598,26 @@ public class Nifti {
 				sz = readDouble(hdr, swapBytes);
 				z3 = readDouble(hdr, swapBytes);
 
-				metadata.putDouble("NIFTI HEADER: affine x0 parameter = ", sx);
-				metadata.putDouble("NIFTI HEADER: affine x1 parameter = ", x1);
-				metadata.putDouble("NIFTI HEADER: affine x2 parameter = ", x2);
-				metadata.putDouble("NIFTI HEADER: affine x3 parameter = ", x3);
-				metadata.putDouble("NIFTI HEADER: affine y0 parameter = ", y0);
-				metadata.putDouble("NIFTI HEADER: affine y1 parameter = ", sy);
-				metadata.putDouble("NIFTI HEADER: affine y2 parameter = ", y2);
-				metadata.putDouble("NIFTI HEADER: affine y3 parameter = ", y3);
-				metadata.putDouble("NIFTI HEADER: affine z0 parameter = ", z0);
-				metadata.putDouble("NIFTI HEADER: affine z1 parameter = ", z1);
-				metadata.putDouble("NIFTI HEADER: affine z2 parameter = ", sz);
-				metadata.putDouble("NIFTI HEADER: affine z3 parameter = ", z3);
+				metadata.putDouble("NIFTI HEADER: affine x0 parameter", sx);
+				metadata.putDouble("NIFTI HEADER: affine x1 parameter", x1);
+				metadata.putDouble("NIFTI HEADER: affine x2 parameter", x2);
+				metadata.putDouble("NIFTI HEADER: affine x3 parameter", x3);
+				metadata.putDouble("NIFTI HEADER: affine y0 parameter", y0);
+				metadata.putDouble("NIFTI HEADER: affine y1 parameter", sy);
+				metadata.putDouble("NIFTI HEADER: affine y2 parameter", y2);
+				metadata.putDouble("NIFTI HEADER: affine y3 parameter", y3);
+				metadata.putDouble("NIFTI HEADER: affine z0 parameter", z0);
+				metadata.putDouble("NIFTI HEADER: affine z1 parameter", z1);
+				metadata.putDouble("NIFTI HEADER: affine z2 parameter", sz);
+				metadata.putDouble("NIFTI HEADER: affine z3 parameter", z3);
 
 				int slice_code = readInt(hdr, swapBytes);
 
-				metadata.putInt("NIFTI HEADER: slice code = ", slice_code);
+				metadata.putInt("NIFTI HEADER: slice code", slice_code);
 				
 				int xyzt_units = readInt(hdr, swapBytes);
 
-				metadata.putInt("NIFTI HEADER: xyzt units = ", xyzt_units);
+				metadata.putInt("NIFTI HEADER: xyzt units", xyzt_units);
 
 				int v;
 				units = new String[(int)numD];
@@ -646,18 +646,18 @@ public class Nifti {
 
 				int nifti_intent_code = readInt(hdr, swapBytes);
 
-				metadata.putInt("NIFTI HEADER: intent code = ", nifti_intent_code);
-				metadata.putDouble("NIFTI HEADER: intent param 1 = ", nifti_intent_param1);
-				metadata.putDouble("NIFTI HEADER: intent param 2 = ", nifti_intent_param2);
-				metadata.putDouble("NIFTI HEADER: intent param 3 = ", nifti_intent_param3);
+				metadata.putInt("NIFTI HEADER: intent code", nifti_intent_code);
+				metadata.putDouble("NIFTI HEADER: intent param 1", nifti_intent_param1);
+				metadata.putDouble("NIFTI HEADER: intent param 2", nifti_intent_param2);
+				metadata.putDouble("NIFTI HEADER: intent param 3", nifti_intent_param3);
 
 				intent = readString(hdr, 16);
 
-				metadata.putString("NIFTI HEADER: intent = ", intent);
+				metadata.putString("NIFTI HEADER: intent", intent);
 
 				byte dim_info = readByte(hdr);
 				
-				metadata.putByte("NIFTI HEADER: dim info = ", dim_info);
+				metadata.putByte("NIFTI HEADER: dim info", dim_info);
 
 				for (int i = 0; i < 15; i++) {
 					// unused stuff
