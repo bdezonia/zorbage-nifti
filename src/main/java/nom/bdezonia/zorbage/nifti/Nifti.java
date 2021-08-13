@@ -61,6 +61,7 @@ import nom.bdezonia.zorbage.coordinates.StringDefinedAxisEquation;
 import nom.bdezonia.zorbage.data.DimensionedDataSource;
 import nom.bdezonia.zorbage.data.DimensionedStorage;
 import nom.bdezonia.zorbage.datasource.IndexedDataSource;
+import nom.bdezonia.zorbage.dataview.PlaneView;
 import nom.bdezonia.zorbage.metadata.MetaDataStore;
 import nom.bdezonia.zorbage.misc.DataBundle;
 import nom.bdezonia.zorbage.procedure.Procedure2;
@@ -725,39 +726,47 @@ public class Nifti {
 				UnsignedInt1Member pix = G.UINT1.construct();
 				type = pix;
 				data = DimensionedStorage.allocate(pix, dims);
-				IntegerIndex idx = new IntegerIndex((int)numD);
-				SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
+				PlaneView planes = new PlaneView<>(data, 0, 1);
+				long[] planeDims = new long[data.numDimensions()-2];
+				for (int i = 0; i < planeDims.length; i++) {
+					planeDims[i] = data.dimension(i+2);
+				}
+				IntegerIndex idx = new IntegerIndex(planeDims);
+				SamplingIterator<IntegerIndex> itr = GridIterator.compute(planeDims);
 				byte bucket = 0;
 				while (itr.hasNext()) {
 					itr.next(idx);
-					long saved0 = (numD > 0) ? idx.get(0) : 0;
-					long saved1 = (numD > 1) ? idx.get(1) : 0;
-					long saved2 = (numD > 2) ? idx.get(2) : 0;
-					// orient the axis data correctly
-					if ((numD > 0) && ((!is_analyze && sx < 0) || (is_analyze && sx > 0))) {
-						idx.set(0, dims[0] - saved0 - 1);
+					for (int i = 0; i < planeDims.length; i++) {
+						planes.setPositionValue(i, idx.get(i));
 					}
-					if ((numD > 1) && sy > 0) {
-						idx.set(1, dims[1] - saved1 - 1);
-					}
-					if ((numD > 2) && sz < 0) {
-						idx.set(2, dims[2] - saved2 - 1);
-					}
-					int bitNum = (int) (idx.get(0) % 8); 
-					if (bitNum == 0) {
-						bucket = readByte(values);
-					}
-					int val = (bucket & (1 << bitNum)) > 0 ? 1 : 0;
-					pix.setV(val);
-					data.set(idx, pix);
-					if ((numD > 0) && ((!is_analyze && sx < 0) || (is_analyze && sx > 0))) {
-						idx.set(0, saved0);
-					}
-					if ((numD > 1) && sy > 0) {
-						idx.set(1, saved1);
-					}
-					if ((numD > 2) && sz < 0) {
-						idx.set(2, saved2);
+					for (long y = 0; y < planes.d1(); y++) {
+						for (long x = 0; x < planes.d0(); x++) {
+							int bitNum = (int) (x % 8); 
+							if (bitNum == 0) {
+								bucket = readByte(values);
+							}
+							int val = (bucket & (1 << bitNum)) > 0 ? 1 : 0;
+							pix.setV(val);
+							// orient the axis data correctly
+							long transformedX = x;
+							if ((!is_analyze && sx < 0) || (is_analyze && sx > 0)) {
+								transformedX = planes.d0() - 1 - x;
+							}
+							long transformedY = y;
+							if (sy > 0) {
+								transformedY = planes.d1() - 1 - y;
+							}
+							long savedZ = -400;
+							if (data.numDimensions() > 2 && sz < 0) {
+								savedZ = planes.getPositionValue(0);
+								long transformedZ = data.dimension(2) - 1 - savedZ;
+								planes.setPositionValue(0, transformedZ);
+							}
+							planes.set(transformedX, transformedY, pix);
+							if (savedZ != -400) {
+								planes.setPositionValue(0, savedZ);
+							}
+						}
 					}
 				}
 				if (scl_slope != 0) {
@@ -770,33 +779,41 @@ public class Nifti {
 				// all other types are straightforward
 				type = value(data_type);
 				data = DimensionedStorage.allocate(type, dims);
-				IntegerIndex idx = new IntegerIndex((int) numD);
-				SamplingIterator<IntegerIndex> itr = GridIterator.compute(dims);
+				PlaneView planes = new PlaneView<>(data, 0, 1);
+				long[] planeDims = new long[data.numDimensions()-2];
+				for (int i = 0; i < planeDims.length; i++) {
+					planeDims[i] = data.dimension(i+2);
+				}
+				IntegerIndex idx = new IntegerIndex(planeDims);
+				SamplingIterator<IntegerIndex> itr = GridIterator.compute(planeDims);
 				while (itr.hasNext()) {
 					itr.next(idx);
-					long saved0 = (numD > 0) ? idx.get(0) : 0;
-					long saved1 = (numD > 1) ? idx.get(1) : 0;
-					long saved2 = (numD > 2) ? idx.get(2) : 0;
-					// orient the axis data correctly
-					if ((numD > 0) && ((!is_analyze && sx < 0) || (is_analyze && sx > 0))) {
-						idx.set(0, dims[0] - saved0 - 1);
+					for (int i = 0; i < planeDims.length; i++) {
+						planes.setPositionValue(i, idx.get(i));
 					}
-					if ((numD > 1) && sy > 0) {
-						idx.set(1, dims[1] - saved1 - 1);
-					}
-					if ((numD > 2) && sz < 0) {
-						idx.set(2, dims[2] - saved2 - 1);
-					}
-					readValue(values, data_type, swapBytes, buf128, type);
-					data.set(idx, type);
-					if ((numD > 0) && ((!is_analyze && sx < 0) || (is_analyze && sx > 0))) {
-						idx.set(0, saved0);
-					}
-					if ((numD > 1) && sy > 0) {
-						idx.set(1, saved1);
-					}
-					if ((numD > 2) && sz < 0) {
-						idx.set(2, saved2);
+					for (long y = 0; y < planes.d1(); y++) {
+						for (long x = 0; x < planes.d0(); x++) {
+							readValue(values, data_type, swapBytes, buf128, type);
+							// orient the axis data correctly
+							long transformedX = x;
+							if ((!is_analyze && sx < 0) || (is_analyze && sx > 0)) {
+								transformedX = planes.d0() - 1 - x;
+							}
+							long transformedY = y;
+							if (sy > 0) {
+								transformedY = planes.d1() - 1 - y;
+							}
+							long savedZ = -400;
+							if (data.numDimensions() > 2 && sz < 0) {
+								savedZ = planes.getPositionValue(0);
+								long transformedZ = data.dimension(2) - 1 - savedZ;
+								planes.setPositionValue(0, transformedZ);
+							}
+							planes.set(transformedX, transformedY, type);
+							if (savedZ != -400) {
+								planes.setPositionValue(0, savedZ);
+							}
+						}
 					}
 				}
 				if (scl_slope != 0) {
