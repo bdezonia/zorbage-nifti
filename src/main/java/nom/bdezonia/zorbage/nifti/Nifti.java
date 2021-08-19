@@ -96,6 +96,23 @@ import nom.bdezonia.zorbage.type.real.highprec.HighPrecisionMember;
 @SuppressWarnings({"rawtypes", "unused", "unchecked"})
 public class Nifti {
 	
+	private static Float32Member typeFlt;
+	private static Float64Member typeDbl;
+	private static Float128Member typeQuad;
+	private static UnsignedInt8Member typeUInt8;
+	private static UnsignedInt16Member typeUInt16;
+	private static UnsignedInt32Member typeUInt32;
+	private static UnsignedInt64Member typeUInt64;
+	private static SignedInt8Member typeInt8;
+	private static SignedInt16Member typeInt16;
+	private static SignedInt32Member typeInt32;
+	private static SignedInt64Member typeInt64;
+	private static RgbMember typeRgb;
+	private static ArgbMember typeArgb;
+	private static ComplexFloat32Member typeCFlt;
+	private static ComplexFloat64Member typeCDbl;
+	private static ComplexFloat128Member typeCQuad;
+	
 	/**
 	 * 
 	 * @param filename
@@ -127,7 +144,7 @@ public class Nifti {
 			bf1 = new BufferedInputStream(f1);
 			
 			hdr = new DataInputStream(bf1);
-
+			
 			boolean two_files;
 			
 			long numD;
@@ -716,7 +733,7 @@ public class Nifti {
 			DimensionedDataSource data;
 			
 			Allocatable type;
-
+			
 			Tuple2<Allocatable,DimensionedDataSource> result;
 
 			System.out.println("dims = " + Arrays.toString(dims));
@@ -778,6 +795,9 @@ public class Nifti {
 			else {
 				// all other types are straightforward
 				type = value(data_type);
+
+				typeCast(type, data_type);
+				
 				data = DimensionedStorage.allocate(type, dims);
 				PlaneView planes = new PlaneView<>(data, 0, 1);
 				long[] planeDims = new long[data.numDimensions()-2];
@@ -986,6 +1006,64 @@ public class Nifti {
 		}
 	}
 
+	private static void typeCast(Object type, int data_type) {
+		
+		switch (data_type) {
+		case 1: // bit
+			throw new IllegalArgumentException("bit types should never pass through this routine");
+		case 2: // uint8
+			typeUInt8 = (UnsignedInt8Member) type;
+			break;
+		case 4: // int16
+			typeInt16 = (SignedInt16Member) type;
+			break;
+		case 8: // int32
+			typeInt32 = (SignedInt32Member) type;
+			break;
+		case 16: // float32
+			typeFlt = (Float32Member) type;
+			break;
+		case 32: // cfloat32
+			typeCFlt = (ComplexFloat32Member) type;
+			break;
+		case 64: // float64
+			typeDbl = (Float64Member) type;
+			break;
+		case 128: // rgb
+			typeRgb = (RgbMember) type;
+			break;
+		case 256: // int8
+			typeInt8 = (SignedInt8Member) type;
+			break;
+		case 512: // uint16
+			typeUInt16 = (UnsignedInt16Member) type;
+			break;
+		case 768: // uint32
+			typeUInt32 = (UnsignedInt32Member) type;
+			break;
+		case 1024: // int64
+			typeInt64 = (SignedInt64Member) type;
+			break;
+		case 1280: // uint64
+			typeUInt64 = (UnsignedInt64Member) type;
+			break;
+		case 1536: // float128
+			typeQuad = (Float128Member) type;
+			break;
+		case 1792: // cfloat64
+			typeCDbl = (ComplexFloat64Member) type;
+			break;
+		case 2048: // cfloat128
+			typeCQuad = (ComplexFloat128Member) type;
+			break;
+		case 2304: // rgba
+			typeArgb = (ArgbMember) type;
+			break;
+		default:
+			throw new IllegalArgumentException("Unknown data type! "+data_type);
+		}
+	}
+
 	private static void readValue(DataInputStream d, short data_type, boolean swapBytes, byte[] buf128, Allocatable type) throws IOException {
 		
 		byte tb;
@@ -995,87 +1073,86 @@ public class Nifti {
 		float tf;
 		double td;
 		BigDecimal tbd;
-		Float128Member flt128Val = G.QUAD.construct();
-				
+		
 		switch (data_type) {
 		case 1: // bit
 			throw new IllegalArgumentException("bit types should never pass through this routine");
 		case 2: // uint8
 			tb = readByte(d);
-			((UnsignedInt8Member) type).setV(tb);
+			typeUInt8.setV(tb);
 			break;
 		case 4: // int16
 			ts = readShort(d, swapBytes);
-			((SignedInt16Member) type).setV(ts);
+			typeInt16.setV(ts);
 			break;
 		case 8: // int32
 			ti = readInt(d, swapBytes);
-			((SignedInt32Member) type).setV(ti);
+			typeInt32.setV(ti);
 			break;
 		case 16: // float32
 			tf = readFloat(d, swapBytes);
-			((Float32Member) type).setV(tf);
+			typeFlt.setV(tf);
 			break;
 		case 32: // cfloat32
 			tf = readFloat(d, swapBytes);
-			((ComplexFloat32Member) type).setR(tf);
+			typeCFlt.setR(tf);
 			tf = readFloat(d, swapBytes);
-			((ComplexFloat32Member) type).setI(tf);
+			typeCFlt.setI(tf);
 			break;
 		case 64: // float64
 			td = readDouble(d, swapBytes);
-			((Float64Member) type).setV(td);
+			typeDbl.setV(td);
 			break;
 		case 128: // rgb
 			tb = readByte(d);
-			((RgbMember) type).setR(tb);
+			typeRgb.setR(tb);
 			tb = readByte(d);
-			((RgbMember) type).setG(tb);
+			typeRgb.setG(tb);
 			tb = readByte(d);
-			((RgbMember) type).setB(tb);
+			typeRgb.setB(tb);
 			break;
 		case 256: // int8
 			tb = readByte(d);
-			((SignedInt8Member) type).setV(tb);
+			typeInt8.setV(tb);
 			break;
 		case 512: // uint16
 			ts = readShort(d, swapBytes);
-			((UnsignedInt16Member) type).setV(ts);
+			typeUInt16.setV(ts);
 			break;
 		case 768: // uint32
 			ti = readInt(d, swapBytes);
-			((UnsignedInt32Member) type).setV(ti);
+			typeUInt32.setV(ti);
 			break;
 		case 1024: // int64
 			tl = readLong(d, swapBytes);
-			((SignedInt64Member) type).setV(tl);
+			typeInt64.setV(tl);
 			break;
 		case 1280: // uint64
 			tl = readLong(d, swapBytes);
-			((UnsignedInt64Member) type).setV(tl);
+			typeUInt64.setV(tl);
 			break;
 		case 1536: // float128
-			readFloat128(d, swapBytes, buf128, (Float128Member) type);
+			readFloat128(d, swapBytes, buf128, typeQuad);
 			break;
 		case 1792: // cfloat64
 			td = readDouble(d, swapBytes);
-			((ComplexFloat64Member) type).setR(td);
+			typeCDbl.setR(td);
 			td = readDouble(d, swapBytes);
-			((ComplexFloat64Member) type).setI(td);
+			typeCDbl.setI(td);
 			break;
 		case 2048: // cfloat128
-			readFloat128(d, swapBytes, buf128, ((ComplexFloat128Member) type).r());
-			readFloat128(d, swapBytes, buf128, ((ComplexFloat128Member) type).i());
+			readFloat128(d, swapBytes, buf128, typeCQuad.r());
+			readFloat128(d, swapBytes, buf128, typeCQuad.i());
 			break;
 		case 2304: // rgba
 			tb = readByte(d);
-			((ArgbMember) type).setR(tb);
+			typeArgb.setR(tb);
 			tb = readByte(d);
-			((ArgbMember) type).setG(tb);
+			typeArgb.setG(tb);
 			tb = readByte(d);
-			((ArgbMember) type).setB(tb);
+			typeArgb.setB(tb);
 			tb = readByte(d);
-			((ArgbMember) type).setA(tb);
+			typeArgb.setA(tb);
 			break;
 		default:
 			throw new IllegalArgumentException("Unknown data type! "+data_type);
