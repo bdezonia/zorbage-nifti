@@ -122,8 +122,6 @@ public class Nifti {
 				
 		File file1 = new File(filename);
 
-		System.out.println("File length = "+file1.length());
-		
 		FileInputStream f1 = null;
 		
 		FileInputStream f2 = null;
@@ -265,8 +263,6 @@ public class Nifti {
 
 				metadata.putLong("NIFTI HEADER: slice start", slice_start);
 
-				System.out.println("data type: "+data_type+" bitpix "+bitpix);
-				
 				// pixel spacings
 				
 				float sd0 = readFloat(hdr, swapBytes);
@@ -513,8 +509,6 @@ public class Nifti {
 				metadata.putInt("NIFTI HEADER: data_type", data_type);
 				metadata.putInt("NIFTI HEADER: bitpix", bitpix);
 
-				System.out.println("data type: "+data_type+" bitpix "+bitpix);
-				
 				double nifti_intent_param1 = readDouble(hdr, swapBytes);
 				double nifti_intent_param2 = readDouble(hdr, swapBytes);
 				double nifti_intent_param3 = readDouble(hdr, swapBytes);
@@ -793,6 +787,7 @@ public class Nifti {
 				}
 			}
 			else {
+
 				// all other types are straightforward
 				type = value(data_type);
 
@@ -960,7 +955,7 @@ public class Nifti {
 			} catch (IOException x) {
 				;
 			}
-			System.out.println(e);
+			System.out.println("In Nifti open " + e);
 			return new DataBundle();
 		}
 	}
