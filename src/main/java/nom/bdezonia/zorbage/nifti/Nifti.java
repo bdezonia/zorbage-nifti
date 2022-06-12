@@ -1,7 +1,7 @@
 /*
  * zorbage-nifti: code for reading nifti data files into zorbage structures for further processing<
  *
- * Copyright (C) 2021 Barry DeZonia
+ * Copyright (C) 2021-2022 Barry DeZonia
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
