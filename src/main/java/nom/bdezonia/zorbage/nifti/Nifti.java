@@ -64,6 +64,7 @@ import nom.bdezonia.zorbage.datasource.IndexedDataSource;
 import nom.bdezonia.zorbage.dataview.PlaneView;
 import nom.bdezonia.zorbage.metadata.MetaDataStore;
 import nom.bdezonia.zorbage.misc.DataBundle;
+import nom.bdezonia.zorbage.misc.DataSourceUtils;
 import nom.bdezonia.zorbage.procedure.Procedure2;
 import nom.bdezonia.zorbage.sampling.IntegerIndex;
 import nom.bdezonia.zorbage.sampling.SamplingIterator;
@@ -1220,10 +1221,7 @@ public class Nifti {
 	private static Tuple2<Allocatable, DimensionedDataSource>
 		scale(DimensionedDataSource data, Allocatable type, double slope, double intercept)
 	{
-		long[] dims = new long[data.numDimensions()];
-		for (int i = 0; i < dims.length; i++) {
-			dims[i] = data.dimension(i);
-		}
+		long[] dims = DataSourceUtils.dimensions(data);
 		Algebra returnAlg;
 		DimensionedDataSource returnDs;
 		if (type instanceof UnsignedInt1Member) {
