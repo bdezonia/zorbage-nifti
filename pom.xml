@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.github.bdezonia</groupId>
   <artifactId>zorbage-nifti</artifactId>
-  <version>0.1.6</version>
+  <version>0.1.7-SNAPSHOT</version>
   <name>zorbage-nifti</name>
   <description>zorbage-nifti: code for reading nifti data files into zorbage structures for further processing</description>
   <url>https://github.com/bdezonia/zorbage-nifti</url>
@@ -61,7 +61,7 @@
     <dependency>
       <groupId>io.github.bdezonia</groupId>
       <artifactId>zorbage</artifactId>
-      <version>2.0.1</version>
+      <version>2.0.2-SNAPSHOT</version>
     </dependency>
   
   </dependencies>
