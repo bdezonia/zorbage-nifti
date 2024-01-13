@@ -43,8 +43,13 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.HashMap;
 
@@ -119,13 +124,36 @@ public class Nifti {
 	 * @param filename
 	 * @return
 	 */
-	public static DataBundle readAllDatasets(String filename) {
-				
-		File file1 = new File(filename);
-
-		FileInputStream f1 = null;
+	public static
+	
+		DataBundle
 		
-		FileInputStream f2 = null;
+			readAllDatasets(String filename)
+	{
+		try {
+		
+			URI uri = new URI("file", null, new File(filename).getAbsolutePath(), null);
+			
+			return readAllDatasets(uri);
+	
+		} catch (URISyntaxException e) {
+			
+			System.out.println("Bad name for file: "+e.getMessage());
+			
+			return new DataBundle();
+		}
+	}
+
+	/**
+	 * 
+	 * @param filename
+	 * @return
+	 */
+	public static DataBundle readAllDatasets(URI fileURI) {
+				
+		InputStream f1 = null;
+		
+		InputStream f2 = null;
 		
 		BufferedInputStream bf1 = null;
 
@@ -138,7 +166,8 @@ public class Nifti {
 		MetaDataStore metadata = new MetaDataStore();
 				
 		try {
-			f1 = new FileInputStream(file1);
+			
+			f1 = fileURI.toURL().openStream();
 			
 			bf1 = new BufferedInputStream(f1);
 			
@@ -708,9 +737,13 @@ public class Nifti {
 
 			if (two_files) {
 				
-				File file2 = new File(filename.substring(0, filename.length()-4)+ ".img");
+				String file1URLname = fileURI.toURL().toString();
+				
+				String filename2 = file1URLname.substring(0, file1URLname.length()-4)+ ".img";
+				
+				URL file2URLname = new URL(filename2);
 
-				f2 = new FileInputStream(file2);
+				f2 = file2URLname.openStream();
 				
 				bf2 = new BufferedInputStream(f2);
 				
@@ -845,7 +878,7 @@ public class Nifti {
 			
 			data.setName("nifti file");
 			
-			data.setSource(filename);
+			data.setSource(fileURI.toString());
 			
 			BigDecimal[] scales = new BigDecimal[(int)numD];
 			BigDecimal[] offsets = new BigDecimal[(int)numD];
