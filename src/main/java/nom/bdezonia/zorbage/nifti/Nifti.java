@@ -119,7 +119,7 @@ public class Nifti {
 	 * @param filename
 	 * @return
 	 */
-	public static DataBundle open(String filename) {
+	public static DataBundle readAllDatasets(String filename) {
 				
 		File file1 = new File(filename);
 
