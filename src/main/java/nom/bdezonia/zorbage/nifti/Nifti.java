@@ -342,12 +342,12 @@ public class Nifti {
 
 				int v;
 				units = new String[(int)numD];
-				String space_units = "unknown";
+				String space_units = "unk";
 				v = xyzt_units & 0x7;
 				if (v == 1) space_units = "meter";
 				if (v == 2) space_units = "mm";
 				if (v == 3) space_units = "micron";
-				String time_units = "unknown";
+				String time_units = "unk";
 				v = xyzt_units & 0x38;
 				if (v == 6) time_units = "secs";
 				if (v == 16) time_units = "millisecs";
@@ -356,7 +356,7 @@ public class Nifti {
 				if (v == 32) time_units = "hertz";
 				if (v == 40) time_units = "ppm";
 				if (v == 48) time_units = "rad/sec";
-				String other_units = "unknown";
+				String other_units = "unk";
 
 				if (numD > 0) units[0] = space_units;
 				if (numD > 1) units[1] = space_units;
@@ -662,12 +662,12 @@ public class Nifti {
 
 				int v;
 				units = new String[(int)numD];
-				String space_units = "unknown";
+				String space_units = "unk";
 				v = xyzt_units & 0x7;
 				if (v == 1) space_units = "meter";
 				if (v == 2) space_units = "mm";
 				if (v == 3) space_units = "micron";
-				String time_units = "unknown";
+				String time_units = "unk";
 				v = xyzt_units & 0x38;
 				if (v == 6) time_units = "secs";
 				if (v == 16) time_units = "millisecs";
@@ -675,7 +675,7 @@ public class Nifti {
 				if (v == 32) time_units = "hertz";
 				if (v == 40) time_units = "ppm";
 				if (v == 48) time_units = "rad/sec";
-				String other_units = "unknown";
+				String other_units = "unk";
 
 				if (numD > 0) units[0] = space_units;
 				if (numD > 1) units[1] = space_units;
