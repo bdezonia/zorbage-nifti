@@ -144,7 +144,7 @@ public class Nifti {
 
 	/**
 	 * 
-	 * @param filename
+	 * @param fileURI
 	 * @return
 	 */
 	public static DataBundle readAllDatasets(URI fileURI) {
